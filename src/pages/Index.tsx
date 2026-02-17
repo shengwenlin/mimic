@@ -3,11 +3,13 @@ import { Flame, CheckCircle2, LogOut } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useScenes, useSceneProgress } from "@/hooks/use-scenes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCourse } from "@/contexts/CourseContext";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { data: scenes, isLoading } = useScenes();
+  const { activeCourseId } = useCourse();
+  const { data: scenes, isLoading } = useScenes(activeCourseId);
   const { data: progress } = useSceneProgress(user?.id ?? null);
 
   if (isLoading || !scenes) {

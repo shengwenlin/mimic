@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      courses: {
+        Row: {
+          id: string
+          title: string
+          description: string
+          character_context: string
+          owner_id: string | null
+          is_system: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description?: string
+          character_context?: string
+          owner_id?: string | null
+          is_system?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string
+          character_context?: string
+          owner_id?: string | null
+          is_system?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
       lesson_sentences: {
         Row: {
           id: string
@@ -180,6 +210,7 @@ export type Database = {
       }
       scenes: {
         Row: {
+          course_id: string | null
           created_at: string
           day: number
           duration_minutes: number
@@ -190,6 +221,7 @@ export type Database = {
           week: number
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           day?: number
           duration_minutes?: number
@@ -200,6 +232,7 @@ export type Database = {
           week?: number
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           day?: number
           duration_minutes?: number
@@ -209,7 +242,15 @@ export type Database = {
           title?: string
           week?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scenes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sentences: {
         Row: {

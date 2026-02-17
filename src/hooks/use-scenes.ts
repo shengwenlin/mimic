@@ -1,18 +1,31 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export function useScenes() {
+export function useScenes(courseId?: string) {
   return useQuery({
-    queryKey: ["scenes"],
+    queryKey: ["scenes", courseId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scenes")
-        .select("*")
-        .order("week")
-        .order("day");
+      let query = supabase.from("scenes").select("*").order("week").order("day");
+      if (courseId) query = query.eq("course_id", courseId);
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
+  });
+}
+
+export function useCourses(userId: string | null) {
+  return useQuery({
+    queryKey: ["courses", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("courses")
+        .select("*")
+        .order("created_at");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId,
   });
 }
 
