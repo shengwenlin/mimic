@@ -20,93 +20,15 @@ import {
 
 type Step = "intro" | "listen" | "record" | "feedback" | "complete";
 
-// ─── Confetti + Complete screen ───────────────────────────────────────────────
-const CONFETTI_COLORS = ["#4ade80", "#86efac", "#fbbf24", "#f472b6", "#60a5fa", "#a78bfa", "#fb923c"];
-
-function useConfetti(active: boolean) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    if (!active) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    const W = canvas.width;
-    const H = canvas.height;
-    const particles = Array.from({ length: 90 }, () => ({
-      x: Math.random() * W,
-      y: -10 - Math.random() * 100,
-      r: 4 + Math.random() * 5,
-      d: 1.5 + Math.random() * 2.5,
-      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-      tilt: Math.random() * 10 - 5,
-      tiltSpeed: 0.05 + Math.random() * 0.1,
-      angle: 0,
-    }));
-    let raf: number;
-    let frame = 0;
-    const draw = () => {
-      ctx.clearRect(0, 0, W, H);
-      for (const p of particles) {
-        p.angle += p.tiltSpeed;
-        p.tilt = Math.sin(p.angle) * 12;
-        p.y += p.d;
-        p.x += Math.sin(p.angle) * 0.8;
-        ctx.beginPath();
-        ctx.fillStyle = p.color;
-        ctx.ellipse(p.x, p.y, p.r, p.r * 0.45, (p.tilt * Math.PI) / 180, 0, 2 * Math.PI);
-        ctx.fill();
-        // recycle when out of screen
-        if (p.y > H + 10) {
-          p.y = -10;
-          p.x = Math.random() * W;
-        }
-      }
-      frame++;
-      // slow down emission after 3s
-      if (frame < 180) raf = requestAnimationFrame(draw);
-      else {
-        // let remaining particles fall off
-        const fade = () => {
-          ctx.clearRect(0, 0, W, H);
-          let any = false;
-          for (const p of particles) {
-            p.angle += p.tiltSpeed;
-            p.tilt = Math.sin(p.angle) * 12;
-            p.y += p.d;
-            p.x += Math.sin(p.angle) * 0.8;
-            if (p.y < H + 10) {
-              any = true;
-              ctx.beginPath();
-              ctx.fillStyle = p.color;
-              ctx.ellipse(p.x, p.y, p.r, p.r * 0.45, (p.tilt * Math.PI) / 180, 0, 2 * Math.PI);
-              ctx.fill();
-            }
-          }
-          if (any) raf = requestAnimationFrame(fade);
-        };
-        raf = requestAnimationFrame(fade);
-      }
-    };
-    raf = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(raf);
-  }, [active]);
-  return canvasRef;
-}
-
 function CompleteScreen({ totalSentences, avgScore, onHome, onMap }: {
   totalSentences: number;
   avgScore: number;
   onHome: () => void;
   onMap: () => void;
 }) {
-  const canvasRef = useConfetti(true);
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 animate-fade-in relative overflow-hidden">
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
-      <div className="relative z-10 flex flex-col items-center text-center">
+    <div className="flex-1 flex flex-col items-center justify-center px-6 animate-fade-in">
+      <div className="flex flex-col items-center text-center">
         <div className="w-20 h-20 rounded-2xl bg-success/10 flex items-center justify-center mb-6">
           <Check size={40} className="text-success" strokeWidth={2.5} />
         </div>
@@ -116,18 +38,17 @@ function CompleteScreen({ totalSentences, avgScore, onHome, onMap }: {
           {totalSentences} sentences · Avg score {avgScore}
         </p>
       </div>
-      <div className="relative z-10 w-full flex flex-col gap-3 mt-12">
+      <div className="w-full flex flex-col gap-3 mt-12">
         <button onClick={onHome} className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm shadow-sm">
           Home
         </button>
-        <button onClick={onMap} className="w-full bg-muted text-foreground font-medium py-3.5 rounded-full text-sm">
+        <button onClick={onMap} className="w-full bg-muted text-foreground font-medium py-3.5 rounded-xl text-sm">
           View Map
         </button>
       </div>
     </div>
   );
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 const PracticeFlow = () => {
   const navigate = useNavigate();
