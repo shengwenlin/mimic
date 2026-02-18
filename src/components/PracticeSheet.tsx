@@ -231,7 +231,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="rounded-t-3xl px-5 pb-8 pt-10 min-h-[55vh] bg-card">
-        <SheetTitle className="sr-only">跟读练习</SheetTitle>
+        <SheetTitle className="sr-only">Mimic Practice</SheetTitle>
 
         {/* ─── LISTEN ─── */}
         {step === "listen" && (
@@ -261,7 +261,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
         {step === "record" && (
           <div className="flex flex-col items-center animate-fade-in">
             <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-lg mb-4 animate-pulse">
-              现在请说...
+              Speak now...
             </div>
             <p className="text-xl font-semibold text-center leading-relaxed mb-6 px-2">
               {words.map((word, i) => (
@@ -281,7 +281,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
               className="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
               <RotateCcw size={14} />
-              重新听一遍
+              Listen again
             </button>
           </div>
         )}
@@ -323,7 +323,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
                 className="flex items-center gap-1.5 text-xs text-primary font-medium disabled:opacity-50"
               >
                 {playingType === "tts" ? <Pause size={14} /> : <Volume2 size={14} />}
-                例句
+                Model
               </button>
               <button
                 onClick={handlePlayRecording}
@@ -331,7 +331,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
                 className="flex items-center gap-1.5 text-xs text-primary font-medium disabled:opacity-50"
               >
                 {playingType === "recording" ? <Pause size={14} /> : <Play size={14} />}
-                我的录音
+                My recording
               </button>
             </div>
 
@@ -340,7 +340,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
               className="flex items-center gap-2 bg-muted/20 text-muted-foreground px-5 py-2.5 rounded-full text-xs font-medium"
             >
               <RotateCcw size={14} />
-              再来一次
+              Try again
             </button>
           </div>
         )}

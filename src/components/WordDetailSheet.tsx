@@ -150,11 +150,11 @@ const WordDetailSheet = ({ word, onClose }: WordDetailSheetProps) => {
       setSpokenPhonetic(spokenClean);
     } else {
       setRecordState("wrong");
-      setSpokenPhonetic(spokenClean || "（未检测到）");
+      setSpokenPhonetic(spokenClean || "(not detected)");
       if (spokenClean && spokenClean !== targetClean) {
-        setTip(`请尝试说 "${targetClean}" 而不是 "${spokenClean}"。`);
+        setTip(`Try saying "${targetClean}" instead of "${spokenClean}".`);
       } else {
-        setTip("未检测到发音，请再试一次。");
+        setTip("No speech detected. Please try again.");
       }
     }
   }, [stopRecording, transcribe, cleanWord]);
@@ -183,18 +183,18 @@ const WordDetailSheet = ({ word, onClose }: WordDetailSheetProps) => {
 
         <>
             {/* Translation */}
-            <p className="text-xs text-muted-foreground mb-1">翻译</p>
+            <p className="text-xs text-muted-foreground mb-1">Translation</p>
             <p className="text-xl font-semibold text-foreground mb-4">{translation}</p>
 
             {/* Phonetic */}
-            <p className="text-xs text-muted-foreground mb-1">发音</p>
+            <p className="text-xs text-muted-foreground mb-1">Pronunciation</p>
             <p className="text-lg font-semibold text-foreground mb-4">{phonetic}</p>
 
             {/* Spoken result */}
             {recordState === "correct" &&
           <div className="flex items-center gap-3 mb-4">
                 <div>
-                  <p className="text-xs text-muted-foreground mb-0.5">听起来您说的是</p>
+                  <p className="text-xs text-muted-foreground mb-0.5">You said</p>
                   <p className="text-lg font-semibold text-success">{spokenPhonetic}</p>
                 </div>
                 <Check size={32} className="text-success ml-auto" strokeWidth={3} />
@@ -203,7 +203,7 @@ const WordDetailSheet = ({ word, onClose }: WordDetailSheetProps) => {
 
             {recordState === "wrong" &&
           <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-0.5">听起来您说的是</p>
+                <p className="text-xs text-muted-foreground mb-0.5">You said</p>
                 <p className="text-lg font-semibold text-destructive mb-2">{spokenPhonetic}</p>
                 {tip &&
             <div className="rounded-xl p-3 bg-secondary-foreground">
@@ -216,7 +216,7 @@ const WordDetailSheet = ({ word, onClose }: WordDetailSheetProps) => {
             {recordState === "checking" &&
           <div className="flex items-center gap-2 mb-4 py-2">
                 <Loader2 size={18} className="animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">正在分析发音...</p>
+                <p className="text-sm text-muted-foreground">Analyzing pronunciation...</p>
               </div>
           }
 

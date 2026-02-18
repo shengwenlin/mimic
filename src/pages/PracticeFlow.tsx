@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { X, Bookmark, BookmarkCheck, RotateCcw, Volume2, Check, Pause, Play, Loader2 } from "lucide-react";
+import { X, Bookmark, BookmarkCheck, RotateCcw, Volume2, Check, Pause, Play, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import WordDetailSheet from "@/components/WordDetailSheet";
 import { useAudio } from "@/hooks/use-audio";
@@ -302,6 +302,34 @@ const PracticeFlow = () => {
     setStep("listen");
   }, []);
 
+  const handlePrevSentence = useCallback(() => {
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; }
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    stopPlayback();
+    setFeedbackReady(false);
+    setWordResults([]);
+    setHighlightedWords(new Set());
+    setScoring(false);
+    setListenDone(false);
+    listenStarted.current = false;
+    setSentenceIndex((i) => i - 1);
+    setStep("listen");
+  }, [stopPlayback]);
+
+  const handleGoNext = useCallback(() => {
+    if (step === "listen") {
+      stopPlayback();
+      setListenDone(false);
+      setStep("record");
+    } else if (step === "feedback") {
+      handleNextSentence();
+    }
+  }, [step, stopPlayback, handleNextSentence]);
+
+  const isNavigationLocked = step === "record" || scoring;
+  const canGoPrev = !isNavigationLocked && sentenceIndex > 0;
+  const canGoNext = !isNavigationLocked && (step === "listen" || step === "feedback");
+
   const toggleBookmark = async () => {
     const isCurrentlyBookmarked = bookmarked.has(sentenceIndex);
     setBookmarked((prev) => {
@@ -403,8 +431,11 @@ const PracticeFlow = () => {
         {/* LISTEN */}
         {step === "listen" && (
           <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-6 animate-fade-in">
-            <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-2xl p-8 mt-4 flex-1 flex flex-col shadow-xs">
+            <div className="flex-1 flex flex-row items-stretch gap-3 mt-4 mb-8">
+              <button disabled={!canGoPrev} onClick={handlePrevSentence} className="self-center w-10 h-10 rounded-full bg-muted flex items-center justify-center transition-colors disabled:opacity-25 hover:bg-muted/70">
+                <ChevronLeft size={20} className="text-foreground" />
+              </button>
+              <div className="bg-card rounded-2xl p-8 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
                   {!isPlaying && !ttsLoading && <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Paused</div>}
                   <button onClick={toggleBookmark} className="absolute right-0">
@@ -424,16 +455,21 @@ const PracticeFlow = () => {
                   </button>
                 </div>
               </div>
+              <button disabled={!canGoNext} onClick={handleGoNext} className="self-center w-10 h-10 rounded-full bg-muted flex items-center justify-center transition-colors disabled:opacity-25 hover:bg-muted/70">
+                <ChevronRight size={20} className="text-foreground" />
+              </button>
             </div>
-            <button onClick={() => setStep("record")} className="mt-4 mb-8 text-sm text-muted-foreground text-center">Tap to continue</button>
           </div>
         )}
 
         {/* RECORD */}
         {step === "record" && (
           <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-6 animate-fade-in">
-            <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-2xl p-8 mt-4 flex-1 flex flex-col shadow-xs">
+            <div className="flex-1 flex flex-row items-stretch gap-3 mt-4 mb-8">
+              <button disabled className="self-center w-10 h-10 rounded-full bg-muted flex items-center justify-center opacity-25">
+                <ChevronLeft size={20} className="text-foreground" />
+              </button>
+              <div className="bg-card rounded-2xl p-8 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
                   {scoring ? (
                     <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Scoring...</div>
@@ -476,16 +512,21 @@ const PracticeFlow = () => {
                   </button>
                 </div>
               </div>
+              <button disabled className="self-center w-10 h-10 rounded-full bg-muted flex items-center justify-center opacity-25">
+                <ChevronRight size={20} className="text-foreground" />
+              </button>
             </div>
-            <p className="mt-4 mb-8 text-sm text-muted-foreground text-center">Auto-advances when you finish</p>
           </div>
         )}
 
         {/* FEEDBACK */}
         {step === "feedback" && feedbackReady && (
           <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-6 animate-fade-in">
-            <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-2xl p-8 mt-4 flex-1 flex flex-col shadow-xs">
+            <div className="flex-1 flex flex-row items-stretch gap-3 mt-4 mb-8">
+              <button disabled={!canGoPrev} onClick={handlePrevSentence} className="self-center w-10 h-10 rounded-full bg-muted flex items-center justify-center transition-colors disabled:opacity-25 hover:bg-muted/70">
+                <ChevronLeft size={20} className="text-foreground" />
+              </button>
+              <div className="bg-card rounded-2xl p-8 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
                   {isPlaying ? (
                     <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Playing...</div>
@@ -524,8 +565,10 @@ const PracticeFlow = () => {
                   </button>
                 </div>
               </div>
+              <button disabled={!canGoNext} onClick={handleGoNext} className="self-center w-10 h-10 rounded-full bg-muted flex items-center justify-center transition-colors disabled:opacity-25 hover:bg-muted/70">
+                <ChevronRight size={20} className="text-foreground" />
+              </button>
             </div>
-            <button onClick={handleNextSentence} className="mt-4 mb-8 text-sm text-muted-foreground text-center">Tap to continue</button>
           </div>
         )}
 

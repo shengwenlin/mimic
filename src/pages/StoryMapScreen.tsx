@@ -205,12 +205,12 @@ const StoryMapScreen = () => {
     <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
       <AlertDialogContent className="rounded-2xl max-w-[300px]">
         <AlertDialogHeader>
-          <AlertDialogTitle>删除课程？</AlertDialogTitle>
-          <AlertDialogDescription>删除后无法恢复，所有练习记录也会一并清除。</AlertDialogDescription>
+          <AlertDialogTitle>Delete this course?</AlertDialogTitle>
+          <AlertDialogDescription>This action cannot be undone. All practice records will be permanently removed.</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>取消</AlertDialogCancel>
-          <AlertDialogAction onClick={confirmDeleteCourse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">删除</AlertDialogAction>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmDeleteCourse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

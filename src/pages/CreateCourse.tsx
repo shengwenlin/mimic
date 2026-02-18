@@ -10,31 +10,31 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 const ROLES = [
-  { id: "designer", label: "产品设计师", en: "Product Designer" },
-  { id: "pm", label: "产品经理", en: "Product Manager" },
-  { id: "frontend", label: "前端工程师", en: "Frontend Developer" },
-  { id: "backend", label: "后端工程师", en: "Backend Developer" },
-  { id: "data", label: "数据分析师", en: "Data Analyst" },
-  { id: "other", label: "其他", en: "Professional" },
+  { id: "designer", label: "Product Designer", en: "Product Designer" },
+  { id: "pm", label: "Product Manager", en: "Product Manager" },
+  { id: "frontend", label: "Frontend Developer", en: "Frontend Developer" },
+  { id: "backend", label: "Backend Developer", en: "Backend Developer" },
+  { id: "data", label: "Data Analyst", en: "Data Analyst" },
+  { id: "other", label: "Other", en: "Professional" },
 ];
 
 const COMFORT_LEVELS = [
   {
     id: "freeze",
-    label: "开口说英文时我会卡壳",
-    sub: "能听懂，但话到嘴边就不知道怎么说了",
+    label: "I freeze up when speaking English",
+    sub: "I understand, but words fail me when I open my mouth",
     en: "understands English well but freezes when speaking, often losing words under pressure",
   },
   {
     id: "pressure",
-    label: "日常还好，但压力大时就撑不住",
-    sub: "设计评审、高管汇报、被质疑时特别明显",
+    label: "Fine day-to-day, but I struggle under pressure",
+    sub: "Design reviews, exec presentations, and pushback situations",
     en: "comfortable in day-to-day English but struggles under pressure — reviews, exec presentations, and pushback situations",
   },
   {
     id: "natural",
-    label: "能说流利，但听起来不够自然",
-    sub: "想说得更像母语者，少一些翻译腔",
+    label: "I speak fluently, but not naturally",
+    sub: "I want to sound less like a direct translation",
     en: "speaks fluently but wants to sound more natural and less like a direct translation",
   },
 ];
@@ -155,7 +155,7 @@ const CreateCourse = () => {
     if (!user || context.trim().length < 20) return;
     setLoading(true);
     setProgress(0);
-    setProgressStep("正在连接服务器...");
+    setProgressStep("Connecting to server...");
     setError(null);
     try {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-course`, {
@@ -169,10 +169,10 @@ const CreateCourse = () => {
       });
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "生成失败");
+        throw new Error(data.error || "Generation failed");
       }
       const reader = response.body?.getReader();
-      if (!reader) throw new Error("无法读取响应流");
+      if (!reader) throw new Error("Unable to read response stream");
       const decoder = new TextDecoder();
       let buffer = "";
       while (true) {
@@ -197,7 +197,7 @@ const CreateCourse = () => {
         }
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "生成失败，请重试");
+      setError(err instanceof Error ? err.message : "Generation failed, please try again");
       setLoading(false);
     }
   };
@@ -210,7 +210,7 @@ const CreateCourse = () => {
             <Sparkles size={28} className="text-primary animate-pulse" />
           </div>
           <div className="text-center">
-            <p className="text-lg font-semibold font-serif text-foreground mb-1">正在生成课程</p>
+            <p className="text-lg font-semibold font-serif text-foreground mb-1">Generating your course</p>
             <p className="text-sm text-muted-foreground">{progressStep}</p>
           </div>
           <div className="w-full max-w-sm">
@@ -236,7 +236,7 @@ const CreateCourse = () => {
             <button onClick={handleBack}>
               <ArrowLeft size={22} className="text-foreground" />
             </button>
-            <span className="text-xs text-muted-foreground">步骤 {step} / {TOTAL_STEPS}</span>
+            <span className="text-xs text-muted-foreground">Step {step} of {TOTAL_STEPS}</span>
           </div>
           <div className="w-full h-1 bg-muted rounded-full">
             <div
@@ -253,8 +253,8 @@ const CreateCourse = () => {
           {step === 1 && (
             <div className="flex flex-col gap-6">
               <div>
-                <h2 className="text-xl font-bold font-serif text-foreground">你的职位是？</h2>
-                <p className="text-sm text-muted-foreground mt-1">我们会根据你的工作定制场景</p>
+                <h2 className="text-xl font-bold font-serif text-foreground">What's your role?</h2>
+                <p className="text-sm text-muted-foreground mt-1">We'll tailor scenarios to your work</p>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {ROLES.map((r) => (
@@ -278,8 +278,8 @@ const CreateCourse = () => {
           {step === 2 && (
             <div className="flex flex-col gap-6">
               <div>
-                <h2 className="text-xl font-bold font-serif text-foreground">你现在的英文状态？</h2>
-                <p className="text-sm text-muted-foreground mt-1">诚实选择，这样课程才能精准帮到你</p>
+                <h2 className="text-xl font-bold font-serif text-foreground">How's your English right now?</h2>
+                <p className="text-sm text-muted-foreground mt-1">Be honest — this helps us create the right course for you</p>
               </div>
               <div className="flex flex-col gap-3">
                 {COMFORT_LEVELS.map((c) => (
@@ -308,11 +308,11 @@ const CreateCourse = () => {
           {step === 3 && (
             <div className="flex flex-col gap-6">
               <div>
-                <h2 className="text-xl font-bold font-serif text-foreground">你最想攻克哪些场景？</h2>
+                <h2 className="text-xl font-bold font-serif text-foreground">Which situations do you want to master?</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  最多选 3 个
+                  Pick up to 3
                   {selectedScenarios.length > 0 && (
-                    <span className="text-primary font-medium"> · 已选 {selectedScenarios.length}</span>
+                    <span className="text-primary font-medium"> · {selectedScenarios.length} selected</span>
                   )}
                 </p>
               </div>
@@ -344,8 +344,8 @@ const CreateCourse = () => {
           {step === 4 && (
             <div className="flex flex-col gap-5">
               <div>
-                <h2 className="text-xl font-bold font-serif text-foreground">认识你的角色</h2>
-                <p className="text-sm text-muted-foreground mt-1">你的课程围绕这个人物展开</p>
+                <h2 className="text-xl font-bold font-serif text-foreground">Meet your character</h2>
+                <p className="text-sm text-muted-foreground mt-1">Your course will be built around this persona</p>
               </div>
               <textarea
                 value={context}
@@ -353,7 +353,7 @@ const CreateCourse = () => {
                 rows={7}
                 className="w-full bg-card border border-border rounded-2xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors resize-none leading-relaxed"
               />
-              <p className="text-xs text-muted-foreground -mt-2">可以在生成前修改这段描述</p>
+              <p className="text-xs text-muted-foreground -mt-2">You can edit this description before generating</p>
               {error && (
                 <div className="bg-destructive/10 text-destructive text-sm rounded-xl px-4 py-3">
                   {error}
@@ -364,8 +364,8 @@ const CreateCourse = () => {
                 disabled={context.trim().length < 20}
                 className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Sparkles size={16} />
-                生成我的课程
+                <Sparkles size={16} className="text-primary-foreground" />
+                Generate My Course
               </button>
             </div>
           )}
@@ -379,7 +379,7 @@ const CreateCourse = () => {
               disabled={!canNext()}
               className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm disabled:opacity-35 disabled:cursor-not-allowed transition-opacity"
             >
-              下一步 →
+              Next →
             </button>
           </div>
         )}
