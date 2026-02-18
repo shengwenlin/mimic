@@ -53,33 +53,34 @@ const ReviewScreen = () => {
 
   return (
     <AppLayout>
-      <div className="px-6 pt-6 pb-4" style={{ minHeight: "calc(100vh - 64px)" }}>
-        <h1 className="text-xl font-bold font-serif text-foreground mb-1">Saved</h1>
-        <p className="text-[12px] text-muted-foreground mb-6">
+      <div className="max-w-3xl mx-auto px-10 py-12">
+        <h1 className="text-3xl font-bold font-serif text-foreground tracking-tight mb-1">Saved</h1>
+        <p className="text-sm text-muted-foreground mb-10">
           {cards.length} sentence{cards.length !== 1 ? "s" : ""}
         </p>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex items-center justify-center py-20">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         ) : cards.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center gap-2">
-            <Bookmark size={28} className="text-muted-foreground opacity-30 mb-1" strokeWidth={1.5} />
-            <p className="text-base font-semibold font-serif text-foreground">No saved sentences yet</p>
-            <p className="text-[13px] text-muted-foreground leading-relaxed">
+          <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
+            <Bookmark size={32} className="text-muted-foreground opacity-30 mb-1" strokeWidth={1.5} />
+            <p className="text-xl font-semibold font-serif text-foreground">No saved sentences yet</p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
               Bookmark sentences during practice to build your own phrase bank.
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2.5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             {cards.map((card) => {
               const isThisPlaying = playingId === card.id;
               return (
-                <div key={card.id} className="rounded-2xl bg-card p-4 shadow-xs">
-                  <p className="text-[13px] font-medium text-foreground mb-3 leading-relaxed">
+                <div key={card.id} className="rounded-2xl bg-card p-5 shadow-xs">
+                  <p className="text-sm font-medium text-foreground mb-1 leading-relaxed">
                     {card.en}
                   </p>
+                  <p className="text-xs text-muted-foreground mb-4 leading-relaxed">{card.zh}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <button
@@ -105,9 +106,9 @@ const ReviewScreen = () => {
                     <button
                       onClick={() => setPracticeText(card.en)}
                       disabled={!!playingId}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-medium bg-primary text-primary-foreground disabled:opacity-50 shadow-xs"
+                      className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium bg-primary text-primary-foreground disabled:opacity-50 shadow-xs"
                     >
-                      <Mic size={12} className="text-primary-foreground" />
+                      <Mic size={13} className="text-primary-foreground" />
                       Practice
                     </button>
                   </div>

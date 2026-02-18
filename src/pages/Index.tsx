@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2, LogOut, BookOpen, Sparkles, ArrowRight } from "lucide-react";
+import { CheckCircle2, BookOpen, Sparkles, ArrowRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useScenes, useSceneProgress } from "@/hooks/use-scenes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +7,7 @@ import { useCourse } from "@/contexts/CourseContext";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { activeCourseId } = useCourse();
   const { data: scenes, isLoading } = useScenes(activeCourseId);
   const { data: progress } = useSceneProgress(user?.id ?? null);
@@ -28,27 +28,22 @@ const Index = () => {
   if (sceneList.length === 0) {
     return (
       <AppLayout>
-        <div className="px-6 pt-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold font-serif text-foreground tracking-tight">Mimic</h1>
-            <button onClick={signOut} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-              <LogOut size={14} />
+        <div className="max-w-3xl mx-auto px-10 py-12">
+          <h1 className="text-3xl font-bold font-serif text-foreground tracking-tight mb-10">Home</h1>
+          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+            <BookOpen size={32} className="text-muted-foreground opacity-30 mb-1" strokeWidth={1.5} />
+            <p className="text-xl font-semibold font-serif text-foreground">Welcome to Mimic</p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
+              Create a personalized course for your work. AI plans 30 days of practice for you.
+            </p>
+            <button
+              onClick={() => navigate("/courses/create")}
+              className="mt-10 flex items-center gap-2 bg-primary text-primary-foreground font-medium px-6 py-3 rounded-xl text-sm shadow-sm"
+            >
+              <Sparkles size={15} className="text-primary-foreground" />
+              Create My Course
             </button>
           </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[65vh] px-10 text-center">
-          <BookOpen size={28} className="text-muted-foreground opacity-30 mb-1" strokeWidth={1.5} />
-          <p className="text-base font-semibold font-serif text-foreground">Welcome to Mimic</p>
-          <p className="text-[13px] text-muted-foreground leading-relaxed">
-            Create a personalized course for your work. AI plans 30 days of practice for you.
-          </p>
-          <button
-            onClick={() => navigate("/courses/create")}
-            className="mt-12 flex items-center gap-2 bg-primary text-primary-foreground font-medium px-5 py-2.5 rounded-xl text-[13px] shadow-sm"
-          >
-            <Sparkles size={14} className="text-primary-foreground" />
-            Create My Course
-          </button>
         </div>
       </AppLayout>
     );
@@ -60,36 +55,30 @@ const Index = () => {
 
   return (
     <AppLayout>
-      <div className="px-6 pt-6 pb-4">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-xl font-bold font-serif text-foreground tracking-tight">Mimic</h1>
-          <button onClick={signOut} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
-            <LogOut size={14} />
-          </button>
-        </div>
+      <div className="max-w-3xl mx-auto px-10 py-12">
+        <h1 className="text-3xl font-bold font-serif text-foreground tracking-tight mb-10">Home</h1>
 
         {/* Today's Lesson */}
         {todayScene && (
-          <div className="mb-6">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">
+          <div className="mb-10">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
               Today's Lesson
             </p>
             <div
-              className="rounded-2xl p-5 bg-card shadow-sm cursor-pointer"
+              className="rounded-2xl p-7 bg-card shadow-sm cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => navigate(`/scene?id=${todayScene.id}`)}
             >
-              <p className="text-[11px] text-muted-foreground mb-1.5">
+              <p className="text-xs text-muted-foreground mb-2">
                 Week {todayScene.week} · Day {todayScene.day}
               </p>
-              <h3 className="text-base font-bold font-serif text-foreground mb-1">{todayScene.title}</h3>
-              <p className="text-[13px] text-muted-foreground mb-5">
+              <h3 className="text-xl font-bold font-serif text-foreground mb-1">{todayScene.title}</h3>
+              <p className="text-sm text-muted-foreground mb-8">
                 {todayScene.duration_minutes} min
               </p>
               <div className="flex items-center justify-between">
-                <span className="text-[13px] font-medium text-primary">Start practice</span>
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                  <ArrowRight size={16} className="text-primary-foreground" />
+                <span className="text-sm font-medium text-primary">Start practice</span>
+                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
+                  <ArrowRight size={17} className="text-primary-foreground" />
                 </div>
               </div>
             </div>
@@ -99,20 +88,20 @@ const Index = () => {
         {/* Completed */}
         {completedScenes.length > 0 && (
           <div>
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
               Completed
             </p>
             <div className="flex flex-col">
               {completedScenes.map((scene) => {
                 const p = progress?.find((pr) => pr.scene_id === scene.id);
                 return (
-                  <div key={scene.id} className="flex items-center gap-3 py-3 border-b border-border/60 last:border-0">
-                    <CheckCircle2 size={18} className="text-success shrink-0" />
+                  <div key={scene.id} className="flex items-center gap-4 py-4 border-b border-border/60 last:border-0">
+                    <CheckCircle2 size={20} className="text-success shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-medium text-foreground truncate">{scene.title}</p>
-                      <p className="text-[11px] text-muted-foreground">Day {scene.day}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{scene.title}</p>
+                      <p className="text-xs text-muted-foreground">Day {scene.day}</p>
                     </div>
-                    <span className="text-[13px] font-semibold text-success">{p?.avg_score ?? 0}</span>
+                    <span className="text-sm font-semibold text-success">{p?.avg_score ?? 0}</span>
                   </div>
                 );
               })}

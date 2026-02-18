@@ -42,24 +42,26 @@ const AuthScreen = () => {
   if (user) return null;
 
   return (
-    <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-[390px] flex flex-col items-center justify-center px-8">
-        <div className="w-11 h-11 rounded-2xl bg-primary flex items-center justify-center mb-4">
-          <span className="text-primary-foreground text-base font-bold">M</span>
+    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center mb-4">
+            <span className="text-primary-foreground text-lg font-bold">M</span>
+          </div>
+          <h1 className="text-3xl font-bold font-serif text-foreground mb-1">Mimic</h1>
+          <p className="text-sm text-muted-foreground">
+            {isSignUp ? "Create an account to get started" : "Welcome back"}
+          </p>
         </div>
-        <h1 className="text-2xl font-bold font-serif text-foreground mb-1">Mimic</h1>
-        <p className="text-[13px] text-muted-foreground mb-8">
-          {isSignUp ? "Create an account to get started" : "Welcome back"}
-        </p>
 
-        <form onSubmit={handleSubmit} className="w-full flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+            className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
           />
           <input
             type="password"
@@ -68,12 +70,12 @@ const AuthScreen = () => {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            className="w-full px-4 py-3 rounded-xl bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+            className="w-full px-4 py-3.5 rounded-xl bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
           />
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-primary text-primary-foreground font-semibold py-3 rounded-xl text-sm disabled:opacity-50 mt-1 shadow-sm"
+            className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm disabled:opacity-50 mt-1 shadow-sm"
           >
             {submitting ? (
               <span className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin inline-block" />
@@ -83,7 +85,7 @@ const AuthScreen = () => {
 
         <button
           onClick={() => setIsSignUp(!isSignUp)}
-          className="mt-5 text-[13px] text-muted-foreground"
+          className="mt-6 w-full text-sm text-muted-foreground text-center"
         >
           {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
         </button>

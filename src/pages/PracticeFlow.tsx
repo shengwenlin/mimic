@@ -367,12 +367,12 @@ const PracticeFlow = () => {
     <AppLayout showTabs={false}>
       <div className="flex flex-col min-h-screen bg-background">
         {/* Top bar */}
-        <div className="px-5 pt-4 pb-2">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowExitConfirm(true)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+        <div className="max-w-2xl mx-auto w-full px-6 pt-5 pb-2">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowExitConfirm(true)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
               <X size={16} className="text-muted-foreground" />
             </button>
-            <div className="flex-1 flex gap-1">
+            <div className="flex-1 flex gap-1.5">
               {Array.from({ length: TOTAL_SENTENCES }).map((_, i) => {
                 const stepOrder: Record<Step, number> = { intro: 0, listen: 1, record: 2, feedback: 4, complete: 4 };
                 const subSteps = 4;
@@ -392,71 +392,71 @@ const PracticeFlow = () => {
         {/* INTRO */}
         {step === "intro" && currentSentence && (
           <div className="flex-1 flex flex-col items-center justify-center px-6 animate-fade-in">
-            <div className="bg-card rounded-2xl p-8 w-full flex flex-col items-center justify-center min-h-[60vh] shadow-xs">
-              <h1 className="text-xl font-bold font-serif text-foreground text-center mb-3">{scene?.title ?? ""}</h1>
-              <p className="text-sm text-muted-foreground text-center leading-relaxed">{currentSentence.translation}</p>
+            <div className="max-w-2xl w-full bg-card rounded-2xl p-10 flex flex-col items-center justify-center min-h-[55vh] shadow-xs">
+              <h1 className="text-2xl font-bold font-serif text-foreground text-center mb-4">{scene?.title ?? ""}</h1>
+              <p className="text-base text-muted-foreground text-center leading-relaxed">{currentSentence.translation}</p>
             </div>
-            <button onClick={handleIntroContinue} className="mt-8 text-[13px] text-muted-foreground">Tap to continue</button>
+            <button onClick={handleIntroContinue} className="mt-8 text-sm text-muted-foreground">Tap to continue</button>
           </div>
         )}
 
         {/* LISTEN */}
         {step === "listen" && (
-          <div className="flex-1 flex flex-col px-5 animate-fade-in">
+          <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-6 animate-fade-in">
             <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-2xl p-6 mt-3 flex-1 flex flex-col shadow-xs">
+              <div className="bg-card rounded-2xl p-8 mt-4 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
-                  {!isPlaying && !ttsLoading && <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Paused</div>}
+                  {!isPlaying && !ttsLoading && <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Paused</div>}
                   <button onClick={toggleBookmark} className="absolute right-0">
                     {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
                   </button>
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center py-8">
-                  <p className="text-2xl font-medium text-center leading-relaxed text-muted-foreground/40">{sentenceText}</p>
+                <div className="flex-1 flex flex-col items-center justify-center py-10">
+                  <p className="text-3xl font-medium text-center leading-relaxed text-muted-foreground/40">{sentenceText}</p>
                 </div>
-                <p className="text-[13px] text-muted-foreground text-center mb-6">{currentSentence?.translation}</p>
-                <div className="flex items-center justify-center gap-4 mb-2">
-                  <button onClick={() => { stopPlayback(); setListenDone(false); listenStarted.current = false; replayTTS(); }} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <RotateCcw size={16} className="text-primary" />
+                <p className="text-sm text-muted-foreground text-center mb-7">{currentSentence?.translation}</p>
+                <div className="flex items-center justify-center gap-5 mb-2">
+                  <button onClick={() => { stopPlayback(); setListenDone(false); listenStarted.current = false; replayTTS(); }} className="w-11 h-11 rounded-full bg-muted flex items-center justify-center">
+                    <RotateCcw size={17} className="text-primary" />
                   </button>
-                  <button onClick={() => { if (isPlaying) { stopPlayback(); } else { replayTTS(); } }} className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                    {ttsLoading && !isPlaying ? <Loader2 size={24} className="text-primary animate-spin" /> : isPlaying ? <Pause size={24} className="text-primary" /> : <Play size={24} className="text-primary ml-0.5" />}
+                  <button onClick={() => { if (isPlaying) { stopPlayback(); } else { replayTTS(); } }} className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    {ttsLoading && !isPlaying ? <Loader2 size={26} className="text-primary animate-spin" /> : isPlaying ? <Pause size={26} className="text-primary" /> : <Play size={26} className="text-primary ml-0.5" />}
                   </button>
                 </div>
               </div>
             </div>
-            <button onClick={() => setStep("record")} className="mt-4 mb-8 text-[13px] text-muted-foreground text-center">Tap to continue</button>
+            <button onClick={() => setStep("record")} className="mt-4 mb-8 text-sm text-muted-foreground text-center">Tap to continue</button>
           </div>
         )}
 
         {/* RECORD */}
         {step === "record" && (
-          <div className="flex-1 flex flex-col px-5 animate-fade-in">
+          <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-6 animate-fade-in">
             <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-2xl p-6 mt-3 flex-1 flex flex-col shadow-xs">
+              <div className="bg-card rounded-2xl p-8 mt-4 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
                   {scoring ? (
-                    <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Scoring...</div>
+                    <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Scoring...</div>
                   ) : recordingPaused ? (
-                    <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Paused</div>
+                    <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Paused</div>
                   ) : (
-                    <div className="bg-primary text-primary-foreground text-[12px] font-medium px-3 py-1 rounded-lg animate-pulse">Speak now...</div>
+                    <div className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-lg animate-pulse">Speak now...</div>
                   )}
                   <button onClick={toggleBookmark} className="absolute right-0">
                     {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
                   </button>
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center py-8">
-                  <p className="text-2xl font-medium text-center leading-relaxed">
+                <div className="flex-1 flex flex-col items-center justify-center py-10">
+                  <p className="text-3xl font-medium text-center leading-relaxed">
                     {sentenceWords.map((word, i) => (
                       <span key={i} className={`transition-colors duration-300 ${highlightedWords.has(i) ? "text-primary" : "text-muted-foreground/35"}`}>{word} </span>
                     ))}
                   </p>
                 </div>
-                <p className="text-[13px] text-muted-foreground text-center mb-6">{currentSentence?.translation}</p>
-                <div className="flex items-center justify-center gap-4 mb-2">
-                  <button disabled={scoring} onClick={() => { stopPlayback(); setScoring(false); handleRetry(); }} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center disabled:opacity-30">
-                    <RotateCcw size={16} className="text-primary" />
+                <p className="text-sm text-muted-foreground text-center mb-7">{currentSentence?.translation}</p>
+                <div className="flex items-center justify-center gap-5 mb-2">
+                  <button disabled={scoring} onClick={() => { stopPlayback(); setScoring(false); handleRetry(); }} className="w-11 h-11 rounded-full bg-muted flex items-center justify-center disabled:opacity-30">
+                    <RotateCcw size={17} className="text-primary" />
                   </button>
                   <button
                     disabled={scoring}
@@ -470,25 +470,25 @@ const PracticeFlow = () => {
                         if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
                       }
                     }}
-                    className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center disabled:opacity-30"
+                    className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center disabled:opacity-30"
                   >
-                    {recordingPaused ? <Play size={24} className="text-primary ml-0.5" /> : <Pause size={24} className="text-primary" />}
+                    {recordingPaused ? <Play size={26} className="text-primary ml-0.5" /> : <Pause size={26} className="text-primary" />}
                   </button>
                 </div>
               </div>
             </div>
-            <p className="mt-4 mb-8 text-[13px] text-muted-foreground text-center">Auto-advances when you finish</p>
+            <p className="mt-4 mb-8 text-sm text-muted-foreground text-center">Auto-advances when you finish</p>
           </div>
         )}
 
         {/* FEEDBACK */}
         {step === "feedback" && feedbackReady && (
-          <div className="flex-1 flex flex-col px-5 animate-fade-in">
+          <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-6 animate-fade-in">
             <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-2xl p-6 mt-3 flex-1 flex flex-col shadow-xs">
+              <div className="bg-card rounded-2xl p-8 mt-4 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
                   {isPlaying ? (
-                    <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Playing...</div>
+                    <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Playing...</div>
                   ) : allCorrect ? (
                     <div className="bg-success/10 text-success w-10 h-10 rounded-xl flex items-center justify-center"><Check size={22} strokeWidth={3} /></div>
                   ) : (
@@ -498,8 +498,8 @@ const PracticeFlow = () => {
                     {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
                   </button>
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center py-8">
-                  <p className="text-2xl font-medium text-center leading-relaxed">
+                <div className="flex-1 flex flex-col items-center justify-center py-10">
+                  <p className="text-3xl font-medium text-center leading-relaxed">
                     {sentenceWords.map((word, i) => (
                       <span key={i} onClick={() => setSelectedWord(word)} className={`cursor-pointer active:opacity-70 ${
                         wordResults[i] === "correct" ? "text-success" : wordResults[i] === "wrong" ? "text-destructive underline decoration-2 underline-offset-4" : "text-muted-foreground/35"
@@ -507,36 +507,38 @@ const PracticeFlow = () => {
                     ))}
                   </p>
                 </div>
-                <p className="text-[13px] text-muted-foreground text-center mb-5">
+                <p className="text-sm text-muted-foreground text-center mb-6">
                   {currentSentence?.translation}
                 </p>
                 <div className="flex items-center justify-center gap-8 mb-5">
-                  <button onClick={replayTTS} disabled={isPlaying} className="flex items-center gap-1.5 text-[13px] text-primary font-medium disabled:opacity-50">
-                    {playingType === "tts" ? <Pause size={14} /> : <Volume2 size={14} />} Example
+                  <button onClick={replayTTS} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-primary font-medium disabled:opacity-50">
+                    {playingType === "tts" ? <Pause size={15} /> : <Volume2 size={15} />} Example
                   </button>
-                  <button onClick={handlePlayRecording} disabled={isPlaying} className="flex items-center gap-1.5 text-[13px] text-primary font-medium disabled:opacity-50">
-                    {playingType === "recording" ? <Pause size={14} /> : <Play size={14} />} Yours
+                  <button onClick={handlePlayRecording} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-primary font-medium disabled:opacity-50">
+                    {playingType === "recording" ? <Pause size={15} /> : <Play size={15} />} Yours
                   </button>
                 </div>
                 <div className="flex items-center justify-center mb-1">
-                  <button onClick={handleRetry} className="flex items-center gap-1.5 bg-muted text-muted-foreground px-5 py-2.5 rounded-full text-[12px] font-medium">
+                  <button onClick={handleRetry} className="flex items-center gap-1.5 bg-muted text-muted-foreground px-5 py-2.5 rounded-full text-sm font-medium">
                     <RotateCcw size={14} /> Retry
                   </button>
                 </div>
               </div>
             </div>
-            <button onClick={handleNextSentence} className="mt-4 mb-8 text-[13px] text-muted-foreground text-center">Tap to continue</button>
+            <button onClick={handleNextSentence} className="mt-4 mb-8 text-sm text-muted-foreground text-center">Tap to continue</button>
           </div>
         )}
 
         {/* COMPLETE */}
         {step === "complete" && (
-          <CompleteScreen
-            totalSentences={TOTAL_SENTENCES}
-            avgScore={scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0}
-            onHome={() => navigate("/")}
-            onMap={() => navigate("/map")}
-          />
+          <div className="flex-1 flex flex-col max-w-2xl mx-auto w-full px-6">
+            <CompleteScreen
+              totalSentences={TOTAL_SENTENCES}
+              avgScore={scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0}
+              onHome={() => navigate("/")}
+              onMap={() => navigate("/map")}
+            />
+          </div>
         )}
       </div>
       <WordDetailSheet word={selectedWord} onClose={() => setSelectedWord(null)} />

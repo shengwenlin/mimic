@@ -1,12 +1,14 @@
 import { ReactNode } from "react";
-import BottomTabBar from "./BottomTabBar";
+import SidebarNav from "./SidebarNav";
 
+// showTabs=true  → sidebar nav visible (main pages)
+// showTabs=false → fullscreen immersive (practice, scene intro)
 const AppLayout = ({ children, showTabs = true }: { children: ReactNode; showTabs?: boolean }) => (
-  <div className="min-h-screen bg-background flex justify-center">
-    <div className="w-full max-w-[390px] min-h-screen relative pb-16">
+  <div className="min-h-screen bg-background flex">
+    {showTabs && <SidebarNav />}
+    <main className={`flex-1 min-h-screen overflow-y-auto ${showTabs ? "pl-56" : ""}`}>
       {children}
-      {showTabs && <BottomTabBar />}
-    </div>
+    </main>
   </div>
 );
 

@@ -210,17 +210,17 @@ const CreateCourse = () => {
             <Sparkles size={28} className="text-primary animate-pulse" />
           </div>
           <div className="text-center">
-            <p className="text-base font-semibold font-serif text-foreground mb-1">正在生成课程</p>
-            <p className="text-[13px] text-muted-foreground">{progressStep}</p>
+            <p className="text-lg font-semibold font-serif text-foreground mb-1">正在生成课程</p>
+            <p className="text-sm text-muted-foreground">{progressStep}</p>
           </div>
-          <div className="w-full max-w-xs">
+          <div className="w-full max-w-sm">
             <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-[11px] text-muted-foreground text-center mt-2">{progress}%</p>
+            <p className="text-xs text-muted-foreground text-center mt-2">{progress}%</p>
           </div>
         </div>
       </AppLayout>
@@ -231,8 +231,8 @@ const CreateCourse = () => {
     <AppLayout showTabs={false}>
       <div className="flex flex-col min-h-screen">
         {/* Header + Progress */}
-        <div className="px-5 pt-5 pb-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="max-w-xl mx-auto w-full px-8 pt-8 pb-4">
+          <div className="flex items-center justify-between mb-4">
             <button onClick={handleBack}>
               <ArrowLeft size={22} className="text-foreground" />
             </button>
@@ -247,7 +247,7 @@ const CreateCourse = () => {
         </div>
 
         {/* Step content */}
-        <div className="flex-1 px-5 pt-4 pb-8 overflow-y-auto">
+        <div className="flex-1 max-w-xl mx-auto w-full px-8 pt-4 pb-8 overflow-y-auto">
 
           {/* Step 1: Role */}
           {step === 1 && (
@@ -373,7 +373,7 @@ const CreateCourse = () => {
 
         {/* Next button (steps 1–3) */}
         {step < 4 && (
-          <div className="px-5 pb-8">
+          <div className="max-w-xl mx-auto w-full px-8 pb-10">
             <button
               onClick={handleNext}
               disabled={!canNext()}

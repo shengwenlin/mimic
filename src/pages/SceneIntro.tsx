@@ -18,24 +18,22 @@ const SceneIntro = () => {
 
   return (
     <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-[390px] min-h-screen relative flex flex-col px-6 pt-5">
-        <button onClick={() => navigate(-1)} className="mb-6 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-          <ArrowLeft size={16} className="text-foreground" />
+      <div className="w-full max-w-xl min-h-screen relative flex flex-col px-10 pt-8">
+        <button onClick={() => navigate(-1)} className="mb-8 w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+          <ArrowLeft size={17} className="text-foreground" />
         </button>
 
-        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
           Week {scene.week} · Day {scene.day}
         </p>
-        <h1 className="text-xl font-bold font-serif text-foreground mb-2">{scene.title}</h1>
+        <h1 className="text-3xl font-bold font-serif text-foreground mb-5">{scene.title}</h1>
 
-        {/* skill tags removed per design */}
-
-        <div className="rounded-2xl p-4 bg-card shadow-sm mb-4">
-          <p className="text-[13px] text-muted-foreground leading-relaxed">{scene.situation}</p>
+        <div className="rounded-2xl p-6 bg-card shadow-sm mb-5">
+          <p className="text-sm text-muted-foreground leading-relaxed">{scene.situation}</p>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-4">
-          <Clock size={13} />
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
+          <Clock size={14} />
           <span>{scene.duration_minutes} min</span>
         </div>
 
@@ -43,10 +41,10 @@ const SceneIntro = () => {
 
         <button
           onClick={() => navigate(`/practice?sceneId=${scene.id}`)}
-          className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm mb-10 flex items-center justify-center gap-2 shadow-sm"
+          className="w-full bg-primary text-primary-foreground font-semibold py-4 rounded-xl text-sm mb-12 flex items-center justify-center gap-2 shadow-sm"
         >
           Start Practice
-          <ArrowRight size={16} />
+          <ArrowRight size={17} />
         </button>
       </div>
     </div>

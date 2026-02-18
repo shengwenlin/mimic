@@ -50,24 +50,22 @@ const StoryMapScreen = () => {
   if (sceneList.length === 0) {
     return (
       <AppLayout>
-        <div className="px-6 pt-6">
-          <div className="mb-5">
-            <h1 className="text-base font-bold font-serif text-foreground">Lesson</h1>
+        <div className="max-w-3xl mx-auto px-10 py-12">
+          <h1 className="text-3xl font-bold font-serif text-foreground tracking-tight mb-10">Lesson</h1>
+          <div className="flex flex-col items-center justify-center gap-3 py-24 text-center">
+            <BookOpen size={32} className="text-muted-foreground opacity-30 mb-1" strokeWidth={1.5} />
+            <p className="text-xl font-semibold font-serif text-foreground">No courses yet</p>
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-sm">
+              Create a course tailored to your work and start practicing.
+            </p>
+            <button
+              onClick={() => navigate("/courses/create")}
+              className="mt-10 flex items-center gap-2 bg-primary text-primary-foreground font-medium px-6 py-3 rounded-xl text-sm shadow-sm"
+            >
+              <Sparkles size={15} className="text-primary-foreground" />
+              Create My Course
+            </button>
           </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-2 min-h-[60vh] px-10 text-center">
-          <BookOpen size={28} className="text-muted-foreground opacity-30 mb-1" strokeWidth={1.5} />
-          <p className="text-base font-semibold font-serif text-foreground">No courses yet</p>
-          <p className="text-[13px] text-muted-foreground leading-relaxed">
-            Create a course tailored to your work and start practicing.
-          </p>
-          <button
-            onClick={() => navigate("/courses/create")}
-            className="mt-12 flex items-center gap-2 bg-primary text-primary-foreground font-medium px-5 py-2.5 rounded-xl text-[13px] shadow-sm"
-          >
-            <Sparkles size={14} className="text-primary-foreground" />
-            Create My Course
-          </button>
         </div>
       </AppLayout>
     );
@@ -92,19 +90,19 @@ const StoryMapScreen = () => {
 
   return (
     <AppLayout>
-      <div className="px-6 pt-6 pb-20">
+      <div className="max-w-3xl mx-auto px-10 py-12">
         {/* Course Switcher */}
-        <div className="relative mb-5">
+        <div className="relative mb-10">
           <button
             onClick={() => setShowCoursePicker((v) => !v)}
-            className="flex items-center gap-1.5 text-base font-bold font-serif text-foreground"
+            className="flex items-center gap-2 text-3xl font-bold font-serif text-foreground tracking-tight"
           >
             {activeCourse?.title ?? "Loading..."}
-            <ChevronDown size={16} className={`text-muted-foreground transition-transform ${showCoursePicker ? "rotate-180" : ""}`} />
+            <ChevronDown size={20} className={`text-muted-foreground transition-transform ${showCoursePicker ? "rotate-180" : ""}`} />
           </button>
 
           {showCoursePicker && (
-            <div className="absolute top-full left-0 mt-2 w-64 bg-card border border-border/60 rounded-xl shadow-lg z-10 overflow-hidden">
+            <div className="absolute top-full left-0 mt-2 w-72 bg-card border border-border/60 rounded-xl shadow-lg z-10 overflow-hidden">
               {courses?.filter((c) => !c.is_system).map((c) => (
                 <div
                   key={c.id}
@@ -114,7 +112,7 @@ const StoryMapScreen = () => {
                 >
                   <button
                     onClick={() => { setActiveCourse(c.id); setShowCoursePicker(false); }}
-                    className={`flex-1 text-left px-4 py-2.5 text-[13px] ${
+                    className={`flex-1 text-left px-4 py-3 text-sm ${
                       c.id === activeCourseId ? "text-primary font-semibold" : "text-foreground"
                     }`}
                   >
@@ -124,42 +122,42 @@ const StoryMapScreen = () => {
                     <button
                       onClick={(e) => handleDeleteCourse(e, c.id)}
                       disabled={deletingId === c.id}
-                      className="px-3 py-2.5 text-muted-foreground/50 hover:text-destructive transition-colors disabled:opacity-40"
+                      className="px-3 py-3 text-muted-foreground/50 hover:text-destructive transition-colors disabled:opacity-40"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     </button>
                   )}
                 </div>
               ))}
               <button
                 onClick={() => { setShowCoursePicker(false); navigate("/courses/create"); }}
-                className="w-full text-left px-4 py-2.5 text-[13px] text-primary font-medium flex items-center gap-1.5 hover:bg-primary/5 transition-colors"
+                className="w-full text-left px-4 py-3 text-sm text-primary font-medium flex items-center gap-2 hover:bg-primary/5 transition-colors"
               >
-                <Plus size={13} /> New Course
+                <Plus size={14} /> New Course
               </button>
             </div>
           )}
         </div>
 
-        {/* Progress */}
+        {/* Progress bar */}
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[11px] text-muted-foreground">{doneCount} / {scenes.length} completed</p>
-          <p className="text-[11px] font-medium text-primary">{scenes.length > 0 ? Math.round((doneCount / scenes.length) * 100) : 0}%</p>
+          <p className="text-xs text-muted-foreground">{doneCount} / {scenes.length} completed</p>
+          <p className="text-xs font-medium text-primary">{scenes.length > 0 ? Math.round((doneCount / scenes.length) * 100) : 0}%</p>
         </div>
-        <div className="w-full h-1 bg-border/60 rounded-full mb-6">
+        <div className="w-full h-1.5 bg-border/60 rounded-full mb-10">
           <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${scenes.length > 0 ? (doneCount / scenes.length) * 100 : 0}%` }} />
         </div>
 
         {/* Weeks */}
         {Array.from(new Set(scenesWithStatus.map((s) => s.week))).map((week) => (
-          <div key={week} className="mb-5">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">Week {week}</p>
+          <div key={week} className="mb-8">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Week {week}</p>
             <div className="flex flex-col">
               {scenesWithStatus.filter((s) => s.week === week).map((scene) => (
                 <div
                   key={scene.id}
-                  className={`flex items-center gap-3 py-3 border-b border-border/40 last:border-0 ${
-                    scene.status !== "locked" ? "cursor-pointer" : ""
+                  className={`flex items-center gap-4 py-4 border-b border-border/40 last:border-0 ${
+                    scene.status !== "locked" ? "cursor-pointer hover:bg-muted/30 -mx-3 px-3 rounded-xl transition-colors" : ""
                   }`}
                   onClick={() => scene.status !== "locked" && navigate(`/scene?id=${scene.id}`)}
                 >
@@ -171,13 +169,13 @@ const StoryMapScreen = () => {
                   )}
                   {scene.status === "locked" && <Circle size={20} className="text-border shrink-0" />}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-[13px] font-medium truncate ${
+                    <p className={`text-sm font-medium truncate ${
                       scene.status === "locked" ? "text-muted-foreground/40" :
                       scene.status === "current" ? "text-foreground font-semibold" : "text-foreground"
                     }`}>{scene.title}</p>
                   </div>
-                  {scene.status === "done" && <span className="text-[12px] font-semibold text-success">{scene.score}</span>}
-                  {scene.status === "locked" && <Lock size={13} className="text-border" />}
+                  {scene.status === "done" && <span className="text-sm font-semibold text-success">{scene.score}</span>}
+                  {scene.status === "locked" && <Lock size={14} className="text-border" />}
                 </div>
               ))}
             </div>

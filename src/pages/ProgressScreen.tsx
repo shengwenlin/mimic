@@ -105,15 +105,15 @@ const ProgressScreen = () => {
 
   return (
     <AppLayout>
-      <div className="px-6 pt-6 pb-8">
-        <h1 className="text-xl font-bold font-serif text-foreground tracking-tight mb-6">Progress</h1>
+      <div className="max-w-3xl mx-auto px-10 py-12">
+        <h1 className="text-3xl font-bold font-serif text-foreground tracking-tight mb-10">Progress</h1>
 
         {/* Streak card */}
-        <div className="rounded-2xl bg-card p-5 shadow-xs mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Flame size={22} className="text-warning" />
-            <span className="text-2xl font-bold text-foreground">{streak}</span>
-            <span className="text-sm text-muted-foreground">day streak</span>
+        <div className="rounded-2xl bg-card p-7 shadow-xs mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Flame size={26} className="text-warning" />
+            <span className="text-4xl font-bold text-foreground">{streak}</span>
+            <span className="text-base text-muted-foreground">day streak</span>
           </div>
 
           <div className="flex justify-between">
@@ -122,12 +122,12 @@ const ProgressScreen = () => {
               const practiced = streakDays.has(dayStr);
               const isToday = isSameDay(day, now);
               return (
-                <div key={dayStr} className="flex flex-col items-center gap-1.5">
-                  <span className={`text-[10px] font-medium ${isToday ? "text-primary" : "text-muted-foreground/60"}`}>
-                    {format(day, "EEE").charAt(0)}
+                <div key={dayStr} className="flex flex-col items-center gap-2">
+                  <span className={`text-xs font-medium ${isToday ? "text-primary" : "text-muted-foreground/60"}`}>
+                    {format(day, "EEE")}
                   </span>
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
                       practiced
                         ? "bg-primary"
                         : isToday
@@ -136,7 +136,7 @@ const ProgressScreen = () => {
                     }`}
                   >
                     <Flame
-                      size={13}
+                      size={15}
                       className={practiced ? "text-primary-foreground" : "text-muted-foreground/60"}
                     />
                   </div>
@@ -147,25 +147,25 @@ const ProgressScreen = () => {
         </div>
 
         {/* This Week Stats */}
-        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">
           This Week
         </p>
-        <div className="grid grid-cols-3 gap-2.5 mb-6">
+        <div className="grid grid-cols-3 gap-4 mb-8">
           {weeklyStatCards.map((stat) => (
-            <div key={stat.label} className="rounded-2xl bg-card p-4 text-center shadow-xs">
-              <stat.icon size={16} className="mx-auto mb-2 text-primary" />
-              <p className="text-xl font-bold text-foreground">{stat.value}</p>
-              <p className="text-[11px] text-muted-foreground">{stat.label}</p>
+            <div key={stat.label} className="rounded-2xl bg-card p-6 text-center shadow-xs">
+              <stat.icon size={20} className="mx-auto mb-3 text-primary" />
+              <p className="text-3xl font-bold text-foreground mb-1">{stat.value}</p>
+              <p className="text-sm text-muted-foreground">{stat.label}</p>
             </div>
           ))}
         </div>
 
         {/* Motivation */}
-        <div className="rounded-2xl bg-card p-5 text-center shadow-xs">
-          <p className="text-sm font-medium text-foreground mb-1">
+        <div className="rounded-2xl bg-card p-6 shadow-xs">
+          <p className="text-base font-medium text-foreground mb-2">
             {streak >= 7 ? "Amazing consistency!" : streak >= 3 ? "Keep it up!" : streak > 0 ? "Great start!" : "Start your streak"}
           </p>
-          <p className="text-[12px] text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed">
             {streak >= 7
               ? "You've been practicing every day. Your English is improving fast!"
               : streak >= 3
