@@ -7,6 +7,16 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const StoryMapScreen = () => {
   const navigate = useNavigate();
@@ -18,19 +28,26 @@ const StoryMapScreen = () => {
   const queryClient = useQueryClient();
   const [showCoursePicker, setShowCoursePicker] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const handleDeleteCourse = async (e: React.MouseEvent, courseId: string) => {
-    e.stopPropagation();
-    if (!confirm("确定要删除这个课程吗？删除后无法恢复。")) return;
-    setDeletingId(courseId);
-    await supabase.from("courses").delete().eq("id", courseId);
-    if (activeCourseId === courseId) {
-      const remaining = courses?.filter((c) => c.id !== courseId);
+  const confirmDeleteCourse = async () => {
+    if (!confirmDeleteId) return;
+    setDeletingId(confirmDeleteId);
+    setConfirmDeleteId(null);
+    await supabase.from("courses").delete().eq("id", confirmDeleteId);
+    if (activeCourseId === confirmDeleteId) {
+      const remaining = courses?.filter((c) => c.id !== confirmDeleteId);
       const nextId = remaining && remaining.length > 0 ? remaining[0].id : null;
       setActiveCourse(nextId);
     }
     await queryClient.invalidateQueries({ queryKey: ["courses"] });
     setDeletingId(null);
+  };
+
+  const handleDeleteCourse = (e: React.MouseEvent, courseId: string) => {
+    e.stopPropagation();
+    setConfirmDeleteId(courseId);
+    setShowCoursePicker(false);
   };
 
   const activeCourse = courses?.find((c) => c.id === activeCourseId);
@@ -183,6 +200,19 @@ const StoryMapScreen = () => {
         ))}
       </div>
     </AppLayout>
+
+    <AlertDialog open={!!confirmDeleteId} onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+      <AlertDialogContent className="rounded-2xl max-w-[300px]">
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除课程？</AlertDialogTitle>
+          <AlertDialogDescription>删除后无法恢复，所有练习记录也会一并清除。</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmDeleteCourse} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">删除</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 
