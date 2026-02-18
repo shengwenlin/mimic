@@ -106,6 +106,7 @@ const StoryMapScreen = () => {
   const doneCount = scenesWithStatus.filter(s => s.status === "done").length;
 
   return (
+    <>
     <AppLayout>
       <div className="max-w-3xl mx-auto px-10 py-12">
         {/* Course Switcher */}
@@ -213,6 +214,7 @@ const StoryMapScreen = () => {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    </>
   );
 };
 
