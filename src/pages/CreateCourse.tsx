@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCourse } from "@/contexts/CourseContext";
@@ -9,25 +9,154 @@ import { useQueryClient } from "@tanstack/react-query";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
+const ROLES = [
+  { id: "designer", label: "产品设计师", en: "Product Designer" },
+  { id: "pm", label: "产品经理", en: "Product Manager" },
+  { id: "frontend", label: "前端工程师", en: "Frontend Developer" },
+  { id: "backend", label: "后端工程师", en: "Backend Developer" },
+  { id: "data", label: "数据分析师", en: "Data Analyst" },
+  { id: "other", label: "其他", en: "Professional" },
+];
+
+const COMFORT_LEVELS = [
+  {
+    id: "freeze",
+    label: "开口说英文时我会卡壳",
+    sub: "能听懂，但话到嘴边就不知道怎么说了",
+    en: "understands English well but freezes when speaking, often losing words under pressure",
+  },
+  {
+    id: "pressure",
+    label: "日常还好，但压力大时就撑不住",
+    sub: "设计评审、高管汇报、被质疑时特别明显",
+    en: "comfortable in day-to-day English but struggles under pressure — reviews, exec presentations, and pushback situations",
+  },
+  {
+    id: "natural",
+    label: "能说流利，但听起来不够自然",
+    sub: "想说得更像母语者，少一些翻译腔",
+    en: "speaks fluently but wants to sound more natural and less like a direct translation",
+  },
+];
+
+const SCENARIOS_BY_ROLE: Record<string, string[]> = {
+  designer: [
+    "Defending my design when someone pushes back",
+    "Explaining design decisions to PM or engineers",
+    "Presenting user research findings",
+    "Syncing progress in cross-timezone meetings",
+    "Running a design critique session",
+  ],
+  pm: [
+    "Getting team aligned on product direction",
+    "Handling 'that's not feasible' from engineers",
+    "Pushing back on stakeholder priority changes",
+    "Making data-driven decisions in discussion",
+    "Facilitating cross-team roadmap planning",
+  ],
+  frontend: [
+    "Explaining technical decisions in code review",
+    "Evaluating and responding to feature requests",
+    "Advocating for fixing technical debt",
+    "Discussing architecture with senior engineers",
+    "Collaborating with designers and PMs",
+  ],
+  backend: [
+    "Explaining technical decisions in code review",
+    "Evaluating and responding to feature requests",
+    "Advocating for fixing technical debt",
+    "Discussing architecture with senior engineers",
+    "Collaborating with designers and PMs",
+  ],
+  data: [
+    "Presenting findings to non-technical stakeholders",
+    "Explaining why data doesn't support a decision",
+    "Discussing methodology with skeptical audiences",
+    "Requesting cleaner data from engineering",
+    "Turning insight into actionable recommendation",
+  ],
+  other: [
+    "Speaking up confidently in team meetings",
+    "Giving and receiving feedback professionally",
+    "Presenting work to senior leadership",
+    "Handling disagreement without sounding defensive",
+    "Building rapport with international colleagues",
+  ],
+};
+
+function buildContext(roleId: string, comfortId: string, scenarios: string[]): string {
+  const role = ROLES.find((r) => r.id === roleId);
+  const comfort = COMFORT_LEVELS.find((c) => c.id === comfortId);
+  const roleEn = role?.en ?? "Professional";
+  const comfortDesc = comfort?.en ?? "";
+  const topScenario = scenarios[0] ?? "";
+  const rest = scenarios.slice(1);
+  const restStr = rest.length > 0 ? `, ${rest.join(", ").toLowerCase()}` : "";
+  return `Alex is a ${roleEn} at a US tech company with a distributed international team. Alex ${comfortDesc}. The biggest challenge is: ${topScenario.toLowerCase()}. This course follows Alex through real workplace moments — including ${topScenario.toLowerCase()}${restStr}.`;
+}
+
+const TOTAL_STEPS = 4;
+
 const CreateCourse = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { setActiveCourse } = useCourse();
   const queryClient = useQueryClient();
 
-  const [title, setTitle] = useState("");
-  const [characterName, setCharacterName] = useState("");
+  const [step, setStep] = useState(1);
+  const [selectedRole, setSelectedRole] = useState("");
+  const [selectedComfort, setSelectedComfort] = useState("");
+  const [selectedScenarios, setSelectedScenarios] = useState<string[]>([]);
   const [context, setContext] = useState("");
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressStep, setProgressStep] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const canSubmit = title.trim() && characterName.trim() && context.trim().length >= 20 && !loading;
+  // Auto-generate context when entering step 4
+  useEffect(() => {
+    if (step === 4 && selectedRole && selectedComfort && selectedScenarios.length > 0) {
+      setContext(buildContext(selectedRole, selectedComfort, selectedScenarios));
+    }
+  }, [step]);
+
+  const scenarios = SCENARIOS_BY_ROLE[selectedRole] ?? SCENARIOS_BY_ROLE.other;
+
+  const toggleScenario = (s: string) => {
+    setSelectedScenarios((prev) => {
+      if (prev.includes(s)) return prev.filter((x) => x !== s);
+      if (prev.length >= 3) return prev;
+      return [...prev, s];
+    });
+  };
+
+  const selectRole = (id: string) => {
+    if (id !== selectedRole) setSelectedScenarios([]);
+    setSelectedRole(id);
+  };
+
+  const canNext = () => {
+    if (step === 1) return !!selectedRole;
+    if (step === 2) return !!selectedComfort;
+    if (step === 3) return selectedScenarios.length > 0;
+    return context.trim().length >= 20;
+  };
+
+  const handleBack = () => {
+    if (step > 1) setStep((s) => s - 1);
+    else navigate(-1);
+  };
+
+  const handleNext = () => {
+    if (step < TOTAL_STEPS) setStep((s) => s + 1);
+  };
 
   const handleGenerate = async () => {
-    if (!user || !canSubmit) return;
+    if (!user || context.trim().length < 20) return;
     setLoading(true);
+    setProgress(0);
+    setProgressStep("正在连接服务器...");
     setError(null);
-
     try {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-course`, {
         method: "POST",
@@ -36,114 +165,222 @@ const CreateCourse = () => {
           apikey: SUPABASE_KEY,
           Authorization: `Bearer ${SUPABASE_KEY}`,
         },
-        body: JSON.stringify({
-          title: title.trim(),
-          character_name: characterName.trim(),
-          context: context.trim(),
-          user_id: user.id,
-        }),
+        body: JSON.stringify({ context: context.trim(), user_id: user.id }),
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "生成失败");
-
-      // Invalidate courses cache, switch to new course
-      await queryClient.invalidateQueries({ queryKey: ["courses"] });
-      await queryClient.invalidateQueries({ queryKey: ["scenes"] });
-      setActiveCourse(data.course_id);
-      navigate("/map");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "生成失败");
+      }
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("无法读取响应流");
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = JSON.parse(line.slice(6));
+          if (data.error) throw new Error(data.error);
+          if (data.progress !== undefined) setProgress(data.progress);
+          if (data.step) setProgressStep(data.step);
+          if (data.done && data.course_id) {
+            await queryClient.invalidateQueries({ queryKey: ["courses"] });
+            await queryClient.invalidateQueries({ queryKey: ["scenes"] });
+            setActiveCourse(data.course_id);
+            navigate("/map");
+            return;
+          }
+        }
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "生成失败，请重试");
-    } finally {
       setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <AppLayout showTabs={false}>
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 min-h-screen px-10">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+            <Sparkles size={28} className="text-primary animate-pulse" />
+          </div>
+          <div className="text-center">
+            <p className="text-base font-semibold font-serif text-foreground mb-1">正在生成课程</p>
+            <p className="text-[13px] text-muted-foreground">{progressStep}</p>
+          </div>
+          <div className="w-full max-w-xs">
+            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="text-[11px] text-muted-foreground text-center mt-2">{progress}%</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout showTabs={false}>
-      <div className="px-5 pt-5 pb-8 flex flex-col min-h-screen">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <button onClick={() => navigate(-1)}>
-            <ArrowLeft size={22} className="text-foreground" />
-          </button>
-          <h1 className="text-base font-semibold text-foreground">创建自定义课程</h1>
+      <div className="flex flex-col min-h-screen">
+        {/* Header + Progress */}
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <button onClick={handleBack}>
+              <ArrowLeft size={22} className="text-foreground" />
+            </button>
+            <span className="text-xs text-muted-foreground">步骤 {step} / {TOTAL_STEPS}</span>
+          </div>
+          <div className="w-full h-1 bg-muted rounded-full">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-300"
+              style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+            />
+          </div>
         </div>
 
-        {loading ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Sparkles size={32} className="text-primary animate-pulse" />
-            </div>
-            <p className="text-base font-semibold text-foreground">正在生成课程...</p>
-            <p className="text-sm text-muted-foreground text-center">
-              Claude 正在为你设计 30 天的练习内容<br />通常需要 20–40 秒
-            </p>
-            <Loader2 size={20} className="text-primary animate-spin mt-2" />
-          </div>
-        ) : (
-          <div className="flex flex-col gap-6 flex-1">
-            {/* Course title */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                课程名称
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="例如：Sarah 的初创公司日记"
-                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary transition-colors"
-              />
-            </div>
+        {/* Step content */}
+        <div className="flex-1 px-5 pt-4 pb-8 overflow-y-auto">
 
-            {/* Character name */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                角色名字
-              </label>
-              <input
-                type="text"
-                value={characterName}
-                onChange={(e) => setCharacterName(e.target.value)}
-                placeholder="例如：Sarah"
-                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary transition-colors"
-              />
+          {/* Step 1: Role */}
+          {step === 1 && (
+            <div className="flex flex-col gap-6">
+              <div>
+                <h2 className="text-xl font-bold font-serif text-foreground">你的职位是？</h2>
+                <p className="text-sm text-muted-foreground mt-1">我们会根据你的工作定制场景</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {ROLES.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => selectRole(r.id)}
+                    className={`px-4 py-3.5 rounded-2xl text-sm font-medium border transition-colors text-center ${
+                      selectedRole === r.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-foreground border-border"
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* Context */}
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                角色背景描述
-              </label>
+          {/* Step 2: Comfort level */}
+          {step === 2 && (
+            <div className="flex flex-col gap-6">
+              <div>
+                <h2 className="text-xl font-bold font-serif text-foreground">你现在的英文状态？</h2>
+                <p className="text-sm text-muted-foreground mt-1">诚实选择，这样课程才能精准帮到你</p>
+              </div>
+              <div className="flex flex-col gap-3">
+                {COMFORT_LEVELS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedComfort(c.id)}
+                    className={`w-full text-left px-4 py-4 rounded-2xl border transition-colors ${
+                      selectedComfort === c.id
+                        ? "bg-primary border-primary"
+                        : "bg-card border-border"
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${selectedComfort === c.id ? "text-primary-foreground" : "text-foreground"}`}>
+                      {c.label}
+                    </p>
+                    <p className={`text-xs mt-0.5 ${selectedComfort === c.id ? "text-primary-foreground/75" : "text-muted-foreground"}`}>
+                      {c.sub}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Scenarios */}
+          {step === 3 && (
+            <div className="flex flex-col gap-6">
+              <div>
+                <h2 className="text-xl font-bold font-serif text-foreground">你最想攻克哪些场景？</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  最多选 3 个
+                  {selectedScenarios.length > 0 && (
+                    <span className="text-primary font-medium"> · 已选 {selectedScenarios.length}</span>
+                  )}
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                {scenarios.map((s) => {
+                  const isSelected = selectedScenarios.includes(s);
+                  const isDisabled = !isSelected && selectedScenarios.length >= 3;
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => !isDisabled && toggleScenario(s)}
+                      className={`w-full text-left px-4 py-3.5 rounded-2xl text-sm border transition-colors ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : isDisabled
+                          ? "bg-card text-muted-foreground/40 border-border"
+                          : "bg-card text-foreground border-border"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Character description */}
+          {step === 4 && (
+            <div className="flex flex-col gap-5">
+              <div>
+                <h2 className="text-xl font-bold font-serif text-foreground">认识你的角色</h2>
+                <p className="text-sm text-muted-foreground mt-1">你的课程围绕这个人物展开</p>
+              </div>
               <textarea
                 value={context}
                 onChange={(e) => setContext(e.target.value)}
-                rows={5}
-                placeholder="描述这个角色的职业、工作环境和日常场景。例如：Sarah 是一家医疗科技初创公司的产品经理，刚加入团队三个月，负责协调工程师和设计师，每天需要开很多会议，向 CEO 汇报进展..."
-                className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary transition-colors resize-none leading-relaxed"
+                rows={7}
+                className="w-full bg-card border border-border rounded-2xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors resize-none leading-relaxed"
               />
-              <p className="text-xs text-muted-foreground">
-                描述越详细，生成的句子越贴近真实场景（至少 20 字）
-              </p>
-            </div>
-
-            {error && (
-              <div className="bg-destructive/10 text-destructive text-sm rounded-xl px-4 py-3">
-                {error}
-              </div>
-            )}
-
-            <div className="mt-auto pt-4">
+              <p className="text-xs text-muted-foreground -mt-2">可以在生成前修改这段描述</p>
+              {error && (
+                <div className="bg-destructive/10 text-destructive text-sm rounded-xl px-4 py-3">
+                  {error}
+                </div>
+              )}
               <button
                 onClick={handleGenerate}
-                disabled={!canSubmit}
-                className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-full text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                disabled={context.trim().length < 20}
+                className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Sparkles size={16} />
-                用 AI 生成课程
+                生成我的课程
               </button>
             </div>
+          )}
+        </div>
+
+        {/* Next button (steps 1–3) */}
+        {step < 4 && (
+          <div className="px-5 pb-8">
+            <button
+              onClick={handleNext}
+              disabled={!canNext()}
+              className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm disabled:opacity-35 disabled:cursor-not-allowed transition-opacity"
+            >
+              下一步 →
+            </button>
           </div>
         )}
       </div>

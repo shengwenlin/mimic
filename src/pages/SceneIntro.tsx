@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { useScene } from "@/hooks/use-scenes";
 
 const SceneIntro = () => {
@@ -11,38 +11,46 @@ const SceneIntro = () => {
   if (isLoading || !scene) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">加载中...</p>
-      </div>);
-
+        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-[390px] min-h-screen relative flex flex-col px-5 pt-5">
-        <button onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft size={22} className="text-foreground" />
+      <div className="w-full max-w-[390px] min-h-screen relative flex flex-col px-6 pt-5">
+        <button onClick={() => navigate(-1)} className="mb-6 w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+          <ArrowLeft size={16} className="text-foreground" />
         </button>
 
-        <p className="text-xs text-muted-foreground mb-1">
-          Week {scene.week} · Day {scene.day} · {scene.skill_tags?.join(", ")}
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
+          Week {scene.week} · Day {scene.day}
         </p>
-        <h1 className="text-xl font-bold text-foreground mb-4">{scene.title}</h1>
+        <h1 className="text-xl font-bold font-serif text-foreground mb-2">{scene.title}</h1>
 
-        <div className="rounded-xl p-4 mb-5 bg-white">
-          <p className="text-sm text-muted-foreground leading-relaxed">{scene.situation}</p>
+        {/* skill tags removed per design */}
+
+        <div className="rounded-2xl p-4 bg-card shadow-sm mb-4">
+          <p className="text-[13px] text-muted-foreground leading-relaxed">{scene.situation}</p>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground mb-4">
+          <Clock size={13} />
+          <span>{scene.duration_minutes} min</span>
         </div>
 
         <div className="flex-1" />
 
         <button
           onClick={() => navigate(`/practice?sceneId=${scene.id}`)}
-          className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-[50px] text-sm mb-10">
-
-          Let's go
+          className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm mb-10 flex items-center justify-center gap-2 shadow-sm"
+        >
+          Start Practice
+          <ArrowRight size={16} />
         </button>
       </div>
-    </div>);
-
+    </div>
+  );
 };
 
 export default SceneIntro;

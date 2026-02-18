@@ -167,7 +167,7 @@ const WordDetailSheet = ({ word, onClose }: WordDetailSheetProps) => {
       <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
 
       {/* Sheet */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] rounded-t-3xl z-50 p-6 pb-8 animate-slide-up bg-white">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[390px] rounded-t-3xl z-50 p-6 pb-8 animate-slide-up bg-card">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <h2 className="text-2xl font-bold text-foreground capitalize">{cleanWord}</h2>

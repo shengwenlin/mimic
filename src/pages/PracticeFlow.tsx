@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { X, Bookmark, BookmarkCheck, RotateCcw, Volume2, Check, Pause, Play, Loader2, PartyPopper, Home, ArrowRight } from "lucide-react";
+import { X, Bookmark, BookmarkCheck, RotateCcw, Volume2, Check, Pause, Play, Loader2 } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import WordDetailSheet from "@/components/WordDetailSheet";
 import { useAudio } from "@/hooks/use-audio";
@@ -20,12 +20,121 @@ import {
 
 type Step = "intro" | "listen" | "record" | "feedback" | "complete";
 
+// ─── Confetti + Complete screen ───────────────────────────────────────────────
+const CONFETTI_COLORS = ["#4ade80", "#86efac", "#fbbf24", "#f472b6", "#60a5fa", "#a78bfa", "#fb923c"];
+
+function useConfetti(active: boolean) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!active) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const W = canvas.width;
+    const H = canvas.height;
+    const particles = Array.from({ length: 90 }, () => ({
+      x: Math.random() * W,
+      y: -10 - Math.random() * 100,
+      r: 4 + Math.random() * 5,
+      d: 1.5 + Math.random() * 2.5,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      tilt: Math.random() * 10 - 5,
+      tiltSpeed: 0.05 + Math.random() * 0.1,
+      angle: 0,
+    }));
+    let raf: number;
+    let frame = 0;
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      for (const p of particles) {
+        p.angle += p.tiltSpeed;
+        p.tilt = Math.sin(p.angle) * 12;
+        p.y += p.d;
+        p.x += Math.sin(p.angle) * 0.8;
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.ellipse(p.x, p.y, p.r, p.r * 0.45, (p.tilt * Math.PI) / 180, 0, 2 * Math.PI);
+        ctx.fill();
+        // recycle when out of screen
+        if (p.y > H + 10) {
+          p.y = -10;
+          p.x = Math.random() * W;
+        }
+      }
+      frame++;
+      // slow down emission after 3s
+      if (frame < 180) raf = requestAnimationFrame(draw);
+      else {
+        // let remaining particles fall off
+        const fade = () => {
+          ctx.clearRect(0, 0, W, H);
+          let any = false;
+          for (const p of particles) {
+            p.angle += p.tiltSpeed;
+            p.tilt = Math.sin(p.angle) * 12;
+            p.y += p.d;
+            p.x += Math.sin(p.angle) * 0.8;
+            if (p.y < H + 10) {
+              any = true;
+              ctx.beginPath();
+              ctx.fillStyle = p.color;
+              ctx.ellipse(p.x, p.y, p.r, p.r * 0.45, (p.tilt * Math.PI) / 180, 0, 2 * Math.PI);
+              ctx.fill();
+            }
+          }
+          if (any) raf = requestAnimationFrame(fade);
+        };
+        raf = requestAnimationFrame(fade);
+      }
+    };
+    raf = requestAnimationFrame(draw);
+    return () => cancelAnimationFrame(raf);
+  }, [active]);
+  return canvasRef;
+}
+
+function CompleteScreen({ totalSentences, avgScore, onHome, onMap }: {
+  totalSentences: number;
+  avgScore: number;
+  onHome: () => void;
+  onMap: () => void;
+}) {
+  const canvasRef = useConfetti(true);
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center px-6 animate-fade-in relative overflow-hidden">
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <div className="w-20 h-20 rounded-2xl bg-success/10 flex items-center justify-center mb-6">
+          <Check size={40} className="text-success" strokeWidth={2.5} />
+        </div>
+        <h1 className="text-3xl font-bold font-serif text-foreground mb-3">Well done!</h1>
+        <p className="text-sm text-muted-foreground mb-1">You completed all sentences</p>
+        <p className="text-[12px] text-muted-foreground">
+          {totalSentences} sentences · Avg score {avgScore}
+        </p>
+      </div>
+      <div className="relative z-10 w-full flex flex-col gap-3 mt-12">
+        <button onClick={onHome} className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm shadow-sm">
+          Home
+        </button>
+        <button onClick={onMap} className="w-full bg-muted text-foreground font-medium py-3.5 rounded-full text-sm">
+          View Map
+        </button>
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const PracticeFlow = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sceneId = searchParams.get("sceneId");
   const { user } = useAuth();
-  const { playTTS, isPlaying, startRecording, stopRecording, playRecording, transcribe, stopPlayback } = useAudio();
+  const { playTTS, isPlaying, startRecording, stopRecording, playRecording, transcribe, stopPlayback, ensureStream } = useAudio();
 
   const { data: scene } = useScene(sceneId);
   const { data: sentences, isLoading } = useSentences(sceneId);
@@ -37,19 +146,16 @@ const PracticeFlow = () => {
   const [scores, setScores] = useState<number[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
-  // Listen state
   const [listenDone, setListenDone] = useState(false);
   const [ttsLoading, setTtsLoading] = useState(false);
   const listenStarted = useRef(false);
 
-  // Record state
   const [highlightedWords, setHighlightedWords] = useState<Set<number>>(new Set());
   const [scoring, setScoring] = useState(false);
   const [recordingPaused, setRecordingPaused] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Feedback state
   const [wordResults, setWordResults] = useState<("correct" | "wrong")[]>([]);
   const [feedbackReady, setFeedbackReady] = useState(false);
 
@@ -58,10 +164,8 @@ const PracticeFlow = () => {
   const sentenceWords = currentSentence?.text.split(" ") ?? [];
   const sentenceText = currentSentence?.text ?? "";
 
-  // ─── INTRO ───
   const handleIntroContinue = () => setStep("listen");
 
-  // ─── LISTEN: auto-play TTS ───
   useEffect(() => {
     if (step !== "listen" || !sentenceText) return;
     setListenDone(false);
@@ -69,6 +173,8 @@ const PracticeFlow = () => {
     const doPlay = async () => {
       if (listenStarted.current) return;
       listenStarted.current = true;
+      // Pre-warm mic while TTS plays so recording starts instantly
+      ensureStream().catch(() => {});
       setTtsLoading(true);
       try { await playTTS(sentenceText); } catch {}
       setTtsLoading(false);
@@ -87,11 +193,9 @@ const PracticeFlow = () => {
     const spoken = spokenText.toLowerCase().replace(/[.,!?—]/g, "");
     const spokenWords = spoken.split(/\s+/).filter(Boolean);
     const matched = new Set<number>();
-    // Only highlight words sequentially - a word can only match if all previous words have been matched
     let spokenIdx = 0;
     sentenceWords.forEach((w, i) => {
       const clean = w.toLowerCase().replace(/[.,!?—]/g, "");
-      // Search for this word starting from current position in spoken words
       for (let j = spokenIdx; j < spokenWords.length; j++) {
         if (spokenWords[j] === clean) {
           matched.add(i);
@@ -103,18 +207,18 @@ const PracticeFlow = () => {
     return matched;
   }, [sentenceWords]);
 
-  // ─── RECORD ───
   useEffect(() => {
     if (step !== "record" || !sentenceText) return;
     setHighlightedWords(new Set());
     setRecordingPaused(false);
+
+    let finished = false;
 
     const beginRecording = async () => {
       stopPlayback();
       try { await startRecording(); } catch {}
       const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognitionAPI) {
-        await new Promise(r => setTimeout(r, 300));
         const recognition = new SpeechRecognitionAPI();
         recognitionRef.current = recognition;
         recognition.lang = "en-US";
@@ -123,7 +227,7 @@ const PracticeFlow = () => {
         recognition.maxAlternatives = 1;
         let lastTranscript = "";
         let fatalError = false;
-        let restartCount = 0;
+        let stopped = false;
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
           let fullTranscript = "";
@@ -134,23 +238,21 @@ const PracticeFlow = () => {
           const matched = matchSpokenWords(fullTranscript);
           setHighlightedWords(matched);
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = setTimeout(() => finishRecording(lastTranscript), 1200);
+          silenceTimerRef.current = setTimeout(() => { stopped = true; finishRecording(lastTranscript); }, 2500);
         };
         recognition.onspeechend = () => {
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = setTimeout(() => finishRecording(lastTranscript), 800);
+          silenceTimerRef.current = setTimeout(() => { stopped = true; finishRecording(lastTranscript); }, 2000);
         };
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-          if (event.error === "no-speech") return;
+          if (event.error === "no-speech" || event.error === "aborted") return;
           if (event.error === "not-allowed" || event.error === "audio-capture" || event.error === "service-not-allowed") {
             fatalError = true;
           }
         };
         recognition.onend = () => {
-          // Restart if recognition stopped unexpectedly (not via finishRecording)
-          if (!fatalError && recognitionRef.current === recognition && restartCount < 3) {
-            restartCount++;
-            try { recognition.start(); } catch { fatalError = true; }
+          if (!fatalError && !stopped && recognitionRef.current === recognition) {
+            try { recognition.start(); } catch { /* ignore */ }
           }
         };
         recognition.start();
@@ -159,35 +261,52 @@ const PracticeFlow = () => {
       }
     };
 
+    // Score words strictly: sequential order matching
+    const scoreWords = (spokenText: string): ("correct" | "wrong")[] => {
+      const spoken = spokenText.toLowerCase().replace(/[.,!?—']/g, "");
+      const spokenArr = spoken.split(/\s+/).filter(Boolean);
+      const results: ("correct" | "wrong")[] = [];
+      let spokenIdx = 0;
+      for (const w of sentenceWords) {
+        const clean = w.toLowerCase().replace(/[.,!?—']/g, "");
+        let found = false;
+        // Look ahead up to 2 positions to allow minor insertions (e.g. "uh", "um")
+        for (let j = spokenIdx; j < Math.min(spokenIdx + 3, spokenArr.length); j++) {
+          if (spokenArr[j] === clean) {
+            found = true;
+            spokenIdx = j + 1;
+            break;
+          }
+        }
+        results.push(found ? "correct" : "wrong");
+      }
+      return results;
+    };
+
     const finishRecording = async (spokenText: string) => {
+      if (finished) return;
+      finished = true;
       if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; }
       if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
-      // Sync highlighted words from SpeechRecognition before scoring starts
-      if (spokenText) setHighlightedWords(matchSpokenWords(spokenText));
       setScoring(true);
       const blob = await stopRecording();
       try {
         const result = await transcribe(blob);
-        const spoken = (result.text || spokenText || "").toLowerCase().replace(/[.,!?—]/g, "");
-        const spokenW = spoken.split(/\s+/).filter(Boolean);
-        // Update highlighted words with ElevenLabs result (more accurate than browser STT)
-        if (result.text) setHighlightedWords(matchSpokenWords(result.text));
-        const results = sentenceWords.map((w) => {
-          const clean = w.toLowerCase().replace(/[.,!?—]/g, "");
-          return spokenW.includes(clean) ? "correct" as const : "wrong" as const;
-        });
+        const text = result.text || spokenText || "";
+        const results = scoreWords(text);
         setWordResults(results);
         const score = Math.round((results.filter(r => r === "correct").length / results.length) * 100);
         setScores(prev => [...prev, score]);
       } catch {
         if (spokenText) {
-          const matched = matchSpokenWords(spokenText);
-          setHighlightedWords(matched);
-          setWordResults(sentenceWords.map((_, i) => matched.has(i) ? "correct" as const : "wrong" as const));
+          const results = scoreWords(spokenText);
+          setWordResults(results);
+          const score = Math.round((results.filter(r => r === "correct").length / results.length) * 100);
+          setScores(prev => [...prev, score]);
         } else {
           setWordResults(sentenceWords.map(() => "correct"));
+          setScores(prev => [...prev, 100]);
         }
-        setScores(prev => [...prev, 100]);
       }
       setTimeout(() => { setScoring(false); setFeedbackReady(true); setStep("feedback"); }, 500);
     };
@@ -206,7 +325,6 @@ const PracticeFlow = () => {
     setFeedbackReady(true);
   }, [step]);
 
-  // Save progress when complete
   useEffect(() => {
     if (step !== "complete" || !user || !sceneId) return;
     const avgScore = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
@@ -218,7 +336,6 @@ const PracticeFlow = () => {
     }, { onConflict: "user_id,scene_id" }).then(() => {});
   }, [step, user, sceneId, scores]);
 
-  // Save bookmarked phrases to user_vocab
   const saveBookmarks = useCallback(async () => {
     if (!user || !sentences) return;
     for (const idx of bookmarked) {
@@ -273,7 +390,6 @@ const PracticeFlow = () => {
       return next;
     });
 
-    // Immediately save/remove from user_vocab
     if (user && sentences) {
       const sentenceId = sentences[sentenceIndex]?.id;
       if (sentenceId) {
@@ -320,7 +436,7 @@ const PracticeFlow = () => {
     return (
       <AppLayout showTabs={false}>
         <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="animate-spin text-muted-foreground" />
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </AppLayout>
     );
@@ -330,10 +446,10 @@ const PracticeFlow = () => {
     <AppLayout showTabs={false}>
       <div className="flex flex-col min-h-screen bg-background">
         {/* Top bar */}
-        <div className="px-4 pt-4 pb-2">
+        <div className="px-5 pt-4 pb-2">
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowExitConfirm(true)} className="p-1">
-              <X size={20} className="text-muted-foreground" />
+            <button onClick={() => setShowExitConfirm(true)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+              <X size={16} className="text-muted-foreground" />
             </button>
             <div className="flex-1 flex gap-1">
               {Array.from({ length: TOTAL_SENTENCES }).map((_, i) => {
@@ -343,8 +459,8 @@ const PracticeFlow = () => {
                 if (i < sentenceIndex) fillPercent = 100;
                 else if (i === sentenceIndex) fillPercent = Math.min((stepOrder[step] / subSteps) * 100, 100);
                 return (
-                  <div key={i} className="flex-1 h-1 rounded-full bg-muted/30 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${fillPercent}%`, backgroundColor: fillPercent > 0 ? "hsl(var(--primary))" : "transparent" }} />
+                  <div key={i} className="flex-1 h-1 rounded-full bg-border/60 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500 bg-primary" style={{ width: `${fillPercent}%`, opacity: fillPercent > 0 ? 1 : 0 }} />
                   </div>
                 );
               })}
@@ -355,75 +471,71 @@ const PracticeFlow = () => {
         {/* INTRO */}
         {step === "intro" && currentSentence && (
           <div className="flex-1 flex flex-col items-center justify-center px-6 animate-fade-in">
-            <div className="bg-card rounded-3xl p-8 w-full flex flex-col items-center justify-center min-h-[60vh]">
-              <h1 className="text-2xl font-bold text-foreground text-center mb-3">
-                {scene?.title ?? ""}
-              </h1>
-              <p className="text-base text-muted-foreground text-center leading-relaxed">
-                {currentSentence.translation}
-              </p>
+            <div className="bg-card rounded-2xl p-8 w-full flex flex-col items-center justify-center min-h-[60vh] shadow-xs">
+              <h1 className="text-xl font-bold font-serif text-foreground text-center mb-3">{scene?.title ?? ""}</h1>
+              <p className="text-sm text-muted-foreground text-center leading-relaxed">{currentSentence.translation}</p>
             </div>
-            <button onClick={handleIntroContinue} className="mt-8 text-sm text-muted-foreground">点击继续</button>
+            <button onClick={handleIntroContinue} className="mt-8 text-[13px] text-muted-foreground">Tap to continue</button>
           </div>
         )}
 
         {/* LISTEN */}
         {step === "listen" && (
-          <div className="flex-1 flex flex-col px-4 animate-fade-in">
+          <div className="flex-1 flex flex-col px-5 animate-fade-in">
             <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-3xl p-6 mt-4 flex-1 flex flex-col">
+              <div className="bg-card rounded-2xl p-6 mt-3 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
-                  {!isPlaying && !ttsLoading && <div className="bg-muted text-muted-foreground text-sm font-semibold px-4 py-1.5 rounded-lg">已暂停</div>}
+                  {!isPlaying && !ttsLoading && <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Paused</div>}
                   <button onClick={toggleBookmark} className="absolute right-0">
-                    {isBookmarked ? <BookmarkCheck size={20} className="text-primary" /> : <Bookmark size={20} className="text-muted-foreground" />}
+                    {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
                   </button>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center py-8">
-                  <p className="text-3xl font-medium text-center leading-relaxed text-muted-foreground/50">{sentenceText}</p>
+                  <p className="text-2xl font-medium text-center leading-relaxed text-muted-foreground/40">{sentenceText}</p>
                 </div>
-                <p className="text-base text-muted-foreground text-center mb-6">{currentSentence?.translation}</p>
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <button onClick={() => { stopPlayback(); setListenDone(false); listenStarted.current = false; replayTTS(); }} className="w-11 h-11 rounded-full bg-muted/20 flex items-center justify-center">
-                    <RotateCcw size={18} className="text-primary" />
+                <p className="text-[13px] text-muted-foreground text-center mb-6">{currentSentence?.translation}</p>
+                <div className="flex items-center justify-center gap-4 mb-2">
+                  <button onClick={() => { stopPlayback(); setListenDone(false); listenStarted.current = false; replayTTS(); }} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <RotateCcw size={16} className="text-primary" />
                   </button>
-                  <button onClick={() => { if (isPlaying) { stopPlayback(); } else { replayTTS(); } }} className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center">
-                    {ttsLoading && !isPlaying ? <Loader2 size={28} className="text-primary animate-spin" /> : isPlaying ? <Pause size={28} className="text-primary" /> : <Play size={28} className="text-primary ml-0.5" />}
+                  <button onClick={() => { if (isPlaying) { stopPlayback(); } else { replayTTS(); } }} className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    {ttsLoading && !isPlaying ? <Loader2 size={24} className="text-primary animate-spin" /> : isPlaying ? <Pause size={24} className="text-primary" /> : <Play size={24} className="text-primary ml-0.5" />}
                   </button>
                 </div>
               </div>
             </div>
-            <button onClick={() => setStep("record")} className="mt-4 mb-8 text-sm text-muted-foreground text-center">点击继续</button>
+            <button onClick={() => setStep("record")} className="mt-4 mb-8 text-[13px] text-muted-foreground text-center">Tap to continue</button>
           </div>
         )}
 
         {/* RECORD */}
         {step === "record" && (
-          <div className="flex-1 flex flex-col px-4 animate-fade-in">
+          <div className="flex-1 flex flex-col px-5 animate-fade-in">
             <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-3xl p-6 mt-4 flex-1 flex flex-col">
+              <div className="bg-card rounded-2xl p-6 mt-3 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
                   {scoring ? (
-                    <div className="bg-muted text-muted-foreground text-sm font-semibold px-4 py-1.5 rounded-lg">评分中...</div>
+                    <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Scoring...</div>
                   ) : recordingPaused ? (
-                    <div className="bg-muted text-muted-foreground text-sm font-semibold px-4 py-1.5 rounded-lg">已暂停</div>
+                    <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Paused</div>
                   ) : (
-                    <div className="bg-primary text-primary-foreground text-sm font-semibold px-4 py-1.5 rounded-lg animate-pulse">现在请说...</div>
+                    <div className="bg-primary text-primary-foreground text-[12px] font-medium px-3 py-1 rounded-lg animate-pulse">Speak now...</div>
                   )}
                   <button onClick={toggleBookmark} className="absolute right-0">
-                    {isBookmarked ? <BookmarkCheck size={20} className="text-primary" /> : <Bookmark size={20} className="text-muted-foreground" />}
+                    {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
                   </button>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center py-8">
-                  <p className="text-3xl font-medium text-center leading-relaxed">
+                  <p className="text-2xl font-medium text-center leading-relaxed">
                     {sentenceWords.map((word, i) => (
-                      <span key={i} className={`transition-colors duration-300 ${highlightedWords.has(i) ? "text-primary" : "text-muted-foreground/50"}`}>{word} </span>
+                      <span key={i} className={`transition-colors duration-300 ${highlightedWords.has(i) ? "text-primary" : "text-muted-foreground/35"}`}>{word} </span>
                     ))}
                   </p>
                 </div>
-                <p className="text-base text-muted-foreground text-center mb-6">{currentSentence?.translation}</p>
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <button disabled={scoring} onClick={() => { stopPlayback(); setScoring(false); handleRetry(); }} className="w-11 h-11 rounded-full bg-muted/20 flex items-center justify-center disabled:opacity-30">
-                    <RotateCcw size={18} className="text-primary" />
+                <p className="text-[13px] text-muted-foreground text-center mb-6">{currentSentence?.translation}</p>
+                <div className="flex items-center justify-center gap-4 mb-2">
+                  <button disabled={scoring} onClick={() => { stopPlayback(); setScoring(false); handleRetry(); }} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center disabled:opacity-30">
+                    <RotateCcw size={16} className="text-primary" />
                   </button>
                   <button
                     disabled={scoring}
@@ -437,105 +549,88 @@ const PracticeFlow = () => {
                         if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
                       }
                     }}
-                    className="w-16 h-16 rounded-full bg-muted/20 flex items-center justify-center disabled:opacity-30"
+                    className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center disabled:opacity-30"
                   >
-                    {recordingPaused ? <Play size={28} className="text-primary ml-0.5" /> : <Pause size={28} className="text-primary" />}
+                    {recordingPaused ? <Play size={24} className="text-primary ml-0.5" /> : <Pause size={24} className="text-primary" />}
                   </button>
                 </div>
               </div>
             </div>
-            <p className="mt-4 mb-8 text-sm text-muted-foreground text-center">说完后自动进入下一步</p>
+            <p className="mt-4 mb-8 text-[13px] text-muted-foreground text-center">Auto-advances when you finish</p>
           </div>
         )}
 
         {/* FEEDBACK */}
         {step === "feedback" && feedbackReady && (
-          <div className="flex-1 flex flex-col px-4 animate-fade-in">
+          <div className="flex-1 flex flex-col px-5 animate-fade-in">
             <div className="flex-1 flex flex-col">
-              <div className="bg-card rounded-3xl p-6 mt-4 flex-1 flex flex-col">
+              <div className="bg-card rounded-2xl p-6 mt-3 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
                   {isPlaying ? (
-                    <div className="bg-muted text-muted-foreground text-sm font-semibold px-4 py-1.5 rounded-lg">播放中...</div>
+                    <div className="bg-muted text-muted-foreground text-[12px] font-medium px-3 py-1 rounded-lg">Playing...</div>
                   ) : allCorrect ? (
-                    <div className="bg-success text-success-foreground w-12 h-12 rounded-2xl flex items-center justify-center"><Check size={28} strokeWidth={3} /></div>
+                    <div className="bg-success/10 text-success w-10 h-10 rounded-xl flex items-center justify-center"><Check size={22} strokeWidth={3} /></div>
                   ) : (
-                    <div className="bg-warning text-warning-foreground w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold">!</div>
+                    <div className="bg-warning/10 text-warning w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold">!</div>
                   )}
                   <button onClick={toggleBookmark} className="absolute right-0">
-                    {isBookmarked ? <BookmarkCheck size={20} className="text-primary" /> : <Bookmark size={20} className="text-muted-foreground" />}
+                    {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
                   </button>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center py-8">
-                  <p className="text-3xl font-medium text-center leading-relaxed">
+                  <p className="text-2xl font-medium text-center leading-relaxed">
                     {sentenceWords.map((word, i) => (
                       <span key={i} onClick={() => setSelectedWord(word)} className={`cursor-pointer active:opacity-70 ${
-                        wordResults[i] === "correct" ? "text-success" : wordResults[i] === "wrong" ? "text-destructive underline decoration-2 underline-offset-4" : "text-muted-foreground/50"
+                        wordResults[i] === "correct" ? "text-success" : wordResults[i] === "wrong" ? "text-destructive underline decoration-2 underline-offset-4" : "text-muted-foreground/35"
                       }`}>{word} </span>
                     ))}
                   </p>
                 </div>
-                <p className="text-base text-muted-foreground text-center mb-4">{currentSentence?.translation}</p>
-                <div className="flex items-center justify-center gap-6 mb-4">
-                  <button onClick={replayTTS} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-primary font-medium disabled:opacity-50">
-                    {playingType === "tts" ? <Pause size={16} /> : <Volume2 size={16} />} 例子
+                <p className="text-[13px] text-muted-foreground text-center mb-5">
+                  {currentSentence?.translation}
+                </p>
+                <div className="flex items-center justify-center gap-8 mb-5">
+                  <button onClick={replayTTS} disabled={isPlaying} className="flex items-center gap-1.5 text-[13px] text-primary font-medium disabled:opacity-50">
+                    {playingType === "tts" ? <Pause size={14} /> : <Volume2 size={14} />} Example
                   </button>
-                  <button onClick={handlePlayRecording} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-primary font-medium disabled:opacity-50">
-                    {playingType === "recording" ? <Pause size={16} /> : <Play size={16} />} 您
+                  <button onClick={handlePlayRecording} disabled={isPlaying} className="flex items-center gap-1.5 text-[13px] text-primary font-medium disabled:opacity-50">
+                    {playingType === "recording" ? <Pause size={14} /> : <Play size={14} />} Yours
                   </button>
                 </div>
-                <div className="flex items-center justify-center mb-2">
-                  <button onClick={handleRetry} className="flex items-center gap-2 bg-muted/20 text-muted-foreground px-6 py-3 rounded-full text-sm font-medium">
-                    <RotateCcw size={16} /> 重新开始
+                <div className="flex items-center justify-center mb-1">
+                  <button onClick={handleRetry} className="flex items-center gap-1.5 bg-muted text-muted-foreground px-5 py-2.5 rounded-full text-[12px] font-medium">
+                    <RotateCcw size={14} /> Retry
                   </button>
                 </div>
               </div>
             </div>
-            <button onClick={handleNextSentence} className="mt-4 mb-8 text-sm text-muted-foreground text-center">点击继续</button>
+            <button onClick={handleNextSentence} className="mt-4 mb-8 text-[13px] text-muted-foreground text-center">Tap to continue</button>
           </div>
         )}
 
         {/* COMPLETE */}
         {step === "complete" && (
-          <div className="flex-1 flex flex-col items-center justify-center px-6 animate-fade-in">
-            <div className="bg-card rounded-3xl p-8 w-full flex flex-col items-center justify-center min-h-[50vh]">
-              <div className="w-20 h-20 rounded-full bg-success/20 flex items-center justify-center mb-6">
-                <PartyPopper size={40} className="text-success" />
-              </div>
-              <h1 className="text-2xl font-bold text-foreground text-center mb-2">🎉 太棒了！</h1>
-              <p className="text-lg text-muted-foreground text-center mb-2">你已完成本课全部练习</p>
-              <p className="text-sm text-muted-foreground text-center">
-                共练习了 {TOTAL_SENTENCES} 个句子 · 平均分 {scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0}
-              </p>
-            </div>
-            <div className="w-full flex flex-col gap-3 mt-8">
-              <button onClick={() => navigate("/")} className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-full text-sm flex items-center justify-center gap-2">
-                <Home size={18} /> 返回首页
-              </button>
-              <button onClick={() => navigate("/map")} className="w-full bg-muted text-foreground font-semibold py-3.5 rounded-full text-sm flex items-center justify-center gap-2">
-                <ArrowRight size={18} /> 查看地图
-              </button>
-            </div>
-          </div>
+          <CompleteScreen
+            totalSentences={TOTAL_SENTENCES}
+            avgScore={scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0}
+            onHome={() => navigate("/")}
+            onMap={() => navigate("/map")}
+          />
         )}
       </div>
       <WordDetailSheet word={selectedWord} onClose={() => setSelectedWord(null)} />
       <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
         <AlertDialogContent className="rounded-2xl max-w-[300px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>确认退出</AlertDialogTitle>
-            <AlertDialogDescription>
-              当前练习进度将不会保存，确定要退出吗？
-            </AlertDialogDescription>
+            <AlertDialogTitle>Leave practice?</AlertDialogTitle>
+            <AlertDialogDescription>Your current progress won't be saved.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>继续练习</AlertDialogCancel>
+            <AlertDialogCancel>Continue</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              if (window.history.length > 2) {
-                navigate(-1);
-              } else {
-                navigate("/map", { replace: true });
-              }
-            }}>确认退出</AlertDialogAction>
+              if (window.history.length > 2) navigate(-1);
+              else navigate("/map", { replace: true });
+            }}>Leave</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

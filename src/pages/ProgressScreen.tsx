@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Flame, BookOpen, Target, TrendingUp, Loader2 } from "lucide-react";
+import { Flame, BookOpen, Target, TrendingUp } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,6 @@ const ProgressScreen = () => {
     const fetchData = async () => {
       setLoading(true);
 
-      // Get all completed scene_progress for this user
       const { data: progress } = await supabase
         .from("scene_progress")
         .select("completed_at, avg_score, scene_id")
@@ -32,7 +31,6 @@ const ProgressScreen = () => {
         .not("completed_at", "is", null)
         .order("completed_at", { ascending: false });
 
-      // Get user_vocab count for phrases learned
       const { count: phraseCount } = await supabase
         .from("user_vocab")
         .select("id", { count: "exact", head: true })
@@ -42,7 +40,6 @@ const ProgressScreen = () => {
       const uniqueDates = new Set(completedDates);
       setStreakDays(uniqueDates);
 
-      // Calculate streak (consecutive days ending today or yesterday)
       let currentStreak = 0;
       const today = new Date();
       for (let i = 0; i < 365; i++) {
@@ -50,7 +47,6 @@ const ProgressScreen = () => {
         if (uniqueDates.has(day)) {
           currentStreak++;
         } else if (i === 0) {
-          // today not practiced yet, that's ok, continue checking
           continue;
         } else {
           break;
@@ -58,7 +54,6 @@ const ProgressScreen = () => {
       }
       setStreak(currentStreak);
 
-      // This week stats
       const now = new Date();
       const weekStart = startOfWeek(now, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
@@ -67,10 +62,8 @@ const ProgressScreen = () => {
         return d >= weekStart && d <= weekEnd;
       });
 
-      // Sessions = unique days with practice this week
       const thisWeekDays = new Set(thisWeekProgress.map(p => format(new Date(p.completed_at!), "yyyy-MM-dd")));
 
-      // Get scenes for duration estimation
       const sceneIds = [...new Set(thisWeekProgress.map(p => p.scene_id))];
       let totalMinutes = 0;
       if (sceneIds.length > 0) {
@@ -82,19 +75,13 @@ const ProgressScreen = () => {
         totalMinutes = thisWeekProgress.reduce((sum, p) => sum + (durationMap.get(p.scene_id) ?? 5), 0);
       }
 
-      setStats({
-        sessions: thisWeekDays.size,
-        minutes: totalMinutes,
-        phrases: phraseCount ?? 0,
-      });
-
+      setStats({ sessions: thisWeekDays.size, minutes: totalMinutes, phrases: phraseCount ?? 0 });
       setLoading(false);
     };
 
     fetchData();
   }, [user]);
 
-  // Build this week's day indicators
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
@@ -110,7 +97,7 @@ const ProgressScreen = () => {
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <Loader2 className="animate-spin text-muted-foreground" size={24} />
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </AppLayout>
     );
@@ -118,79 +105,76 @@ const ProgressScreen = () => {
 
   return (
     <AppLayout>
-      <div className="px-5 pt-6 pb-8">
-        {/* Header */}
-        <h1 className="text-2xl font-bold text-foreground tracking-tight mb-6">Progress</h1>
+      <div className="px-6 pt-6 pb-8">
+        <h1 className="text-xl font-bold font-serif text-foreground tracking-tight mb-6">Progress</h1>
 
-        {/* Streak */}
-        <div className="flex items-center gap-2.5 mb-2">
-          <Flame size={28} className="text-warning" />
-          <span className="text-2xl font-bold text-foreground">{streak} day streak</span>
-        </div>
+        {/* Streak card */}
+        <div className="rounded-2xl bg-card p-5 shadow-xs mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Flame size={22} className="text-warning" />
+            <span className="text-2xl font-bold text-foreground">{streak}</span>
+            <span className="text-sm text-muted-foreground">day streak</span>
+          </div>
 
-        {/* Week day indicators */}
-        <div className="flex gap-2 mb-8 ml-1">
-          {weekDays.map((day) => {
-            const dayStr = format(day, "yyyy-MM-dd");
-            const practiced = streakDays.has(dayStr);
-            const isToday = isSameDay(day, now);
-            return (
-              <div key={dayStr} className="flex flex-col items-center gap-1.5">
-                <span className={`text-[11px] font-medium ${isToday ? "text-primary" : "text-muted-foreground"}`}>
-                  {format(day, "EEE").charAt(0)}
-                </span>
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                    practiced
-                      ? "bg-primary"
-                      : isToday
-                      ? "border-2 border-primary bg-background"
-                      : "bg-muted/40"
-                  }`}
-                >
-                  {practiced && <Flame size={14} className="text-primary-foreground" />}
+          <div className="flex justify-between">
+            {weekDays.map((day) => {
+              const dayStr = format(day, "yyyy-MM-dd");
+              const practiced = streakDays.has(dayStr);
+              const isToday = isSameDay(day, now);
+              return (
+                <div key={dayStr} className="flex flex-col items-center gap-1.5">
+                  <span className={`text-[10px] font-medium ${isToday ? "text-primary" : "text-muted-foreground/60"}`}>
+                    {format(day, "EEE").charAt(0)}
+                  </span>
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                      practiced
+                        ? "bg-primary"
+                        : isToday
+                        ? "border-[1.5px] border-primary"
+                        : "bg-muted/60"
+                    }`}
+                  >
+                    <Flame
+                      size={13}
+                      className={practiced ? "text-primary-foreground" : "text-muted-foreground/60"}
+                    />
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {/* This Week Stats */}
-        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-3">
           This Week
-        </h2>
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        </p>
+        <div className="grid grid-cols-3 gap-2.5 mb-6">
           {weeklyStatCards.map((stat) => (
-            <div key={stat.label} className="border border-border rounded-2xl p-4 text-center">
-              <stat.icon size={18} className="mx-auto mb-2 text-primary" />
-              <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            <div key={stat.label} className="rounded-2xl bg-card p-4 text-center shadow-xs">
+              <stat.icon size={16} className="mx-auto mb-2 text-primary" />
+              <p className="text-xl font-bold text-foreground">{stat.value}</p>
+              <p className="text-[11px] text-muted-foreground">{stat.label}</p>
             </div>
           ))}
         </div>
 
-        {/* Motivational message */}
-        {streak > 0 ? (
-          <div className="bg-card border border-border rounded-2xl p-5 text-center">
-            <p className="text-base font-medium text-foreground mb-1">
-              {streak >= 7 ? "🔥 Amazing consistency!" : streak >= 3 ? "💪 Keep it up!" : "🌱 Great start!"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {streak >= 7
-                ? "You've been practicing every day. Your English is improving fast!"
-                : streak >= 3
-                ? `${streak} days in a row! You're building a great habit.`
-                : "Every journey starts with a single step. Come back tomorrow!"}
-            </p>
-          </div>
-        ) : (
-          <div className="bg-card border border-border rounded-2xl p-5 text-center">
-            <p className="text-base font-medium text-foreground mb-1">🎯 Start your streak</p>
-            <p className="text-sm text-muted-foreground">
-              Complete a practice session today to begin your streak!
-            </p>
-          </div>
-        )}
+        {/* Motivation */}
+        <div className="rounded-2xl bg-card p-5 text-center shadow-xs">
+          <p className="text-sm font-medium text-foreground mb-1">
+            {streak >= 7 ? "Amazing consistency!" : streak >= 3 ? "Keep it up!" : streak > 0 ? "Great start!" : "Start your streak"}
+          </p>
+          <p className="text-[12px] text-muted-foreground leading-relaxed">
+            {streak >= 7
+              ? "You've been practicing every day. Your English is improving fast!"
+              : streak >= 3
+              ? `${streak} days in a row! You're building a great habit.`
+              : streak > 0
+              ? "Every journey starts with a single step. Come back tomorrow!"
+              : "Complete a practice session today to begin your streak."}
+          </p>
+        </div>
       </div>
     </AppLayout>
   );

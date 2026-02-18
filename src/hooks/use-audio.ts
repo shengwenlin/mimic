@@ -1,7 +1,21 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+function getMimeOptions(): MediaRecorderOptions {
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isSafari) {
+    if (MediaRecorder.isTypeSupported("audio/mp4")) return { mimeType: "audio/mp4" };
+    if (MediaRecorder.isTypeSupported("audio/aac")) return { mimeType: "audio/aac" };
+  } else {
+    if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) return { mimeType: "audio/webm;codecs=opus" };
+    if (MediaRecorder.isTypeSupported("audio/webm")) return { mimeType: "audio/webm" };
+    if (MediaRecorder.isTypeSupported("audio/mp4")) return { mimeType: "audio/mp4" };
+  }
+  return {};
+}
 
 export function useAudio() {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -10,6 +24,30 @@ export function useAudio() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordedBlobRef = useRef<Blob | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Pre-acquire mic stream on mount so recording starts instantly
+  const ensureStream = useCallback(async (): Promise<MediaStream> => {
+    if (streamRef.current && streamRef.current.active) return streamRef.current;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+      },
+    });
+    streamRef.current = stream;
+    return stream;
+  }, []);
+
+  // Release mic on unmount
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, []);
 
   // ─── TTS: ElevenLabs via edge function, fallback to Web Speech API ───
   const playTTS = useCallback(async (text: string): Promise<void> => {
@@ -82,26 +120,8 @@ export function useAudio() {
   // ─── Record mic audio ───
   const startRecording = useCallback(async (): Promise<void> => {
     chunksRef.current = [];
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    // iOS Safari strongly prefers audio/mp4; prioritize it on Safari
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent) ||
-      /iPad|iPhone|iPod/.test(navigator.userAgent);
-    let options: MediaRecorderOptions = {};
-    if (isSafari) {
-      if (MediaRecorder.isTypeSupported("audio/mp4")) {
-        options = { mimeType: "audio/mp4" };
-      } else if (MediaRecorder.isTypeSupported("audio/aac")) {
-        options = { mimeType: "audio/aac" };
-      }
-    } else {
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-        options = { mimeType: "audio/webm;codecs=opus" };
-      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
-        options = { mimeType: "audio/webm" };
-      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
-        options = { mimeType: "audio/mp4" };
-      }
-    }
+    const stream = await ensureStream();
+    const options = getMimeOptions();
     const recorder = new MediaRecorder(stream, options);
     mediaRecorderRef.current = recorder;
     recorder.ondataavailable = (e) => {
@@ -110,7 +130,7 @@ export function useAudio() {
     recorder.start();
     recordingStartTimeRef.current = Date.now();
     setIsRecording(true);
-  }, []);
+  }, [ensureStream]);
 
   const stopRecording = useCallback((): Promise<Blob> => {
     return new Promise((resolve) => {
@@ -129,7 +149,7 @@ export function useAudio() {
           const blob = new Blob(chunksRef.current, { type: mimeType });
           recordedBlobRef.current = blob;
           setIsRecording(false);
-          recorder.stream.getTracks().forEach((t) => t.stop());
+          // Don't stop stream tracks — we reuse the stream
           resolve(blob);
         };
         recorder.stop();
@@ -162,7 +182,6 @@ export function useAudio() {
   const transcribe = useCallback(async (audioBlob: Blob): Promise<{ text: string }> => {
     try {
       const formData = new FormData();
-      // Use correct file extension based on actual mime type
       const ext = audioBlob.type.includes("mp4") ? "mp4" : audioBlob.type.includes("ogg") ? "ogg" : "webm";
       formData.append("audio", audioBlob, `recording.${ext}`);
       const response = await fetch(
@@ -193,6 +212,7 @@ export function useAudio() {
   return {
     isPlaying, isRecording, playTTS, startRecording,
     stopRecording, playRecording, transcribe, stopPlayback,
+    ensureStream,
     hasRecording: !!recordedBlobRef.current,
   };
 }

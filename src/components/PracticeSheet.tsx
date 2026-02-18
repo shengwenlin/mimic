@@ -13,7 +13,7 @@ interface PracticeSheetProps {
 
 const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => {
   const words = sentence.split(/\s+/);
-  const { playTTS, isPlaying, startRecording, stopRecording, playRecording, transcribe, stopPlayback } = useAudio();
+  const { playTTS, isPlaying, startRecording, stopRecording, playRecording, transcribe, stopPlayback, ensureStream } = useAudio();
 
   const [step, setStep] = useState<Step>("listen");
   const [ttsLoading, setTtsLoading] = useState(false);
@@ -52,6 +52,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
     listenStarted.current = true;
 
     const doPlay = async () => {
+      ensureStream().catch(() => {});
       setTtsLoading(true);
       try { await playTTS(sentence); } catch {}
       setTtsLoading(false);
@@ -85,23 +86,41 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
     if (!open || step !== "record") return;
     setHighlightedWords(new Set());
 
+    let finished = false;
+
+    // Score words strictly: sequential order matching
+    const scoreWords = (spokenText: string): ("correct" | "wrong")[] => {
+      const spoken = spokenText.toLowerCase().replace(/[.,!?—']/g, "");
+      const spokenArr = spoken.split(/\s+/).filter(Boolean);
+      const results: ("correct" | "wrong")[] = [];
+      let spokenIdx = 0;
+      for (const w of words) {
+        const clean = w.toLowerCase().replace(/[.,!?—']/g, "");
+        let found = false;
+        for (let j = spokenIdx; j < Math.min(spokenIdx + 3, spokenArr.length); j++) {
+          if (spokenArr[j] === clean) {
+            found = true;
+            spokenIdx = j + 1;
+            break;
+          }
+        }
+        results.push(found ? "correct" : "wrong");
+      }
+      return results;
+    };
+
     const beginRecording = async () => {
       stopPlayback();
-
-      // Request mic permission and start MediaRecorder FIRST (triggers iOS permission prompt)
       try { await startRecording(); } catch {}
 
-      // Then start SpeechRecognition (permission already granted)
       const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognitionAPI) {
-        // Small delay to let iOS settle after getUserMedia
-        await new Promise(r => setTimeout(r, 300));
-
         const recognition = new SpeechRecognitionAPI();
         recognitionRef.current = recognition;
         recognition.lang = "en-US";
         recognition.interimResults = true;
         recognition.continuous = true;
+        let stopped = false;
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
           let fullTranscript = "";
@@ -113,12 +132,19 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
 
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = setTimeout(() => {
+            stopped = true;
             finishRecording(fullTranscript.trim());
-          }, 2000);
+          }, 2500);
         };
 
         recognition.onerror = (event) => {
-          if (event.error !== "no-speech") console.log("SR error:", event.error);
+          if (event.error !== "no-speech" && event.error !== "aborted") console.log("SR error:", event.error);
+        };
+
+        recognition.onend = () => {
+          if (!stopped && recognitionRef.current === recognition) {
+            try { recognition.start(); } catch { /* ignore */ }
+          }
         };
 
         recognition.start();
@@ -128,6 +154,8 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
     };
 
     const finishRecording = async (spokenText: string) => {
+      if (finished) return;
+      finished = true;
       if (recognitionRef.current) {
         try { recognitionRef.current.stop(); } catch {}
         recognitionRef.current = null;
@@ -141,16 +169,11 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
 
       try {
         const result = await transcribe(blob);
-        const spoken = (result.text || spokenText || "").toLowerCase().replace(/[.,!?]/g, "");
-        const spokenArr = spoken.split(/\s+/).filter(Boolean);
-        setWordResults(words.map((w) => {
-          const clean = w.toLowerCase().replace(/[.,!?]/g, "");
-          return spokenArr.includes(clean) ? "correct" : "wrong";
-        }));
+        const text = result.text || spokenText || "";
+        setWordResults(scoreWords(text));
       } catch {
         if (spokenText) {
-          const matched = matchSpokenWords(spokenText);
-          setWordResults(words.map((_, i) => matched.has(i) ? "correct" : "wrong"));
+          setWordResults(scoreWords(spokenText));
         } else {
           setWordResults(words.map(() => "correct"));
         }
@@ -207,7 +230,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl px-5 pb-8 pt-10 min-h-[55vh] bg-white dark:bg-card">
+      <SheetContent side="bottom" className="rounded-t-3xl px-5 pb-8 pt-10 min-h-[55vh] bg-card">
         <SheetTitle className="sr-only">跟读练习</SheetTitle>
 
         {/* ─── LISTEN ─── */}
