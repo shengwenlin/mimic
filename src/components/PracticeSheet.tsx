@@ -39,7 +39,7 @@ const _lcs = (target: string[], spoken: string[]): Set<number> => {
 };
 const _clean = (w: string) => w.toLowerCase().replace(/[.,!?—'"]/g, "").trim();
 // ─────────────────────────────────────────────────────────────────────────────
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Volume2, Mic, Pause, Play, RotateCcw, Check, Loader2 } from "lucide-react";
 import { useAudio } from "@/hooks/use-audio";
 
@@ -250,14 +250,14 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
   const progressPct = step === "listen" ? 33 : step === "record" ? 66 : 100;
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl px-5 pb-8 pt-10 min-h-[55vh] bg-card">
-        <SheetTitle className="sr-only">Mimic Practice</SheetTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="rounded-3xl px-5 pb-8 pt-10 bg-card border-0 max-w-md w-full gap-0">
+        <DialogTitle className="sr-only">Mimic Practice</DialogTitle>
 
         {/* ─── LISTEN ─── */}
         {step === "listen" && (
           <div className="flex flex-col items-center animate-fade-in">
-            <p className="text-xl font-semibold text-foreground text-center leading-relaxed mb-6 px-2">
+            <p className="text-xl font-semibold text-muted-foreground text-center leading-relaxed mb-6 px-2">
               {sentence}
             </p>
             <div className="flex items-center gap-4 mb-4">
@@ -311,8 +311,8 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
         {step === "feedback" && (
           <div className="flex flex-col items-center animate-fade-in">
             {allCorrect ? (
-              <div className="bg-success text-success-foreground w-10 h-10 rounded-xl flex items-center justify-center mb-4">
-                <Check size={22} strokeWidth={3} />
+              <div className="bg-success w-10 h-10 rounded-xl flex items-center justify-center mb-4">
+                <Check size={22} strokeWidth={3} className="text-white" />
               </div>
             ) : (
               <div className="bg-warning text-warning-foreground w-10 h-10 rounded-xl flex items-center justify-center mb-4 text-base font-bold">
@@ -344,7 +344,7 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
                 className="flex items-center gap-1.5 text-xs text-primary font-medium disabled:opacity-50"
               >
                 {playingType === "tts" ? <Pause size={14} /> : <Volume2 size={14} />}
-                Model
+                Example
               </button>
               <button
                 onClick={handlePlayRecording}
@@ -365,8 +365,8 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
             </button>
           </div>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
 

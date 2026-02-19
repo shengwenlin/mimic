@@ -128,11 +128,7 @@ const ProgressScreen = () => {
                   </span>
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                      practiced
-                        ? "bg-primary"
-                        : isToday
-                        ? "border-[1.5px] border-primary"
-                        : "bg-muted/60"
+                      practiced ? "bg-primary" : "bg-muted/60"
                     }`}
                   >
                     <Flame

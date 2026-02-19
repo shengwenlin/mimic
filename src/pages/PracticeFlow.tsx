@@ -111,7 +111,7 @@ const PracticeFlow = () => {
   const [sentenceIndex, setSentenceIndex] = useState(0);
   const [step, setStep] = useState<Step>("listen");
   const [bookmarked, setBookmarked] = useState<Set<number>>(new Set());
-  const [selectedWord, setSelectedWord] = useState<string | null>(null);
+  const [selectedWordInfo, setSelectedWordInfo] = useState<{ word: string; rect: DOMRect } | null>(null);
   const [scores, setScores] = useState<number[]>([]);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
@@ -553,7 +553,7 @@ const PracticeFlow = () => {
                   {isPlaying ? (
                     <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Playing...</div>
                   ) : allCorrect ? (
-                    <div className="bg-success/10 text-success w-10 h-10 rounded-xl flex items-center justify-center"><Check size={22} strokeWidth={3} /></div>
+                    <div className="bg-success w-10 h-10 rounded-xl flex items-center justify-center"><Check size={22} strokeWidth={3} className="text-white" /></div>
                   ) : (
                     <div className="bg-warning/10 text-warning w-10 h-10 rounded-xl flex items-center justify-center text-base font-bold">!</div>
                   )}
@@ -564,9 +564,18 @@ const PracticeFlow = () => {
                 <div className="flex-1 flex flex-col items-center justify-center py-10">
                   <p className="text-3xl font-medium text-center leading-relaxed">
                     {sentenceWords.map((word, i) => (
-                      <span key={i} onClick={() => setSelectedWord(word)} className={`cursor-pointer active:opacity-70 ${
-                        wordResults[i] === "correct" ? "text-success" : wordResults[i] === "wrong" ? "text-destructive underline decoration-2 underline-offset-4" : "text-muted-foreground/35"
-                      }`}>{word} </span>
+                      <span
+                        key={i}
+                        onClick={(e) => {
+                          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                          setSelectedWordInfo({ word, rect });
+                        }}
+                        className={`cursor-pointer active:opacity-70 ${
+                          wordResults[i] === "correct" ? "text-success" : wordResults[i] === "wrong" ? "text-destructive underline decoration-2 underline-offset-4" : "text-muted-foreground/35"
+                        }`}
+                      >
+                        {word}{" "}
+                      </span>
                     ))}
                   </p>
                 </div>
@@ -606,7 +615,11 @@ const PracticeFlow = () => {
           </div>
         )}
       </div>
-      <WordDetailSheet word={selectedWord} onClose={() => setSelectedWord(null)} />
+      <WordDetailSheet
+        word={selectedWordInfo?.word ?? null}
+        anchorRect={selectedWordInfo?.rect ?? null}
+        onClose={() => setSelectedWordInfo(null)}
+      />
       <AlertDialog open={showExitConfirm} onOpenChange={setShowExitConfirm}>
         <AlertDialogContent className="rounded-2xl max-w-[300px]">
           <AlertDialogHeader>

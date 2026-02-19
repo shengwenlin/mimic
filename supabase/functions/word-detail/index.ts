@@ -11,23 +11,38 @@ Deno.serve(async (req) => {
   }
 
   const { word } = await req.json();
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const QWEN_KEY = Deno.env.get("QWEN_API_KEY");
+  const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY");
+  const API_KEY = QWEN_KEY ?? LOVABLE_KEY;
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  if (!API_KEY) {
+    return new Response(
+      JSON.stringify({ translation: "—", phonetic: word.toLowerCase() }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const apiUrl = QWEN_KEY
+    ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+    : "https://ai.gateway.lovable.dev/v1/chat/completions";
+  const model = QWEN_KEY ? "qwen-turbo" : "google/gemini-2.5-flash-lite";
+
+  const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      Authorization: `Bearer ${API_KEY}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash-lite",
+      model,
       messages: [
         {
           role: "system",
-          content: `You are a pronunciation dictionary. Given an English word, return JSON with:
-- "translation": Chinese translation (concise, 1-3 characters)
-- "phonetic": phonetic pronunciation using simple syllables separated by " · " (e.g. "blang · kuht")
-Return ONLY valid JSON, no markdown.`,
+          content: `你是一个英语词典。给定一个英语单词，返回JSON格式：
+- "translation": 简洁的中文翻译（1-4个汉字，最常用含义）
+- "phonetic": 标准国际音标（IPA），例如 /pɔɪnt/、/lɛt/、/ɪkˈspleɪn/
+
+只返回合法的JSON，不要markdown。示例：{"translation":"允许","phonetic":"/lɛt/"}`,
         },
         { role: "user", content: word },
       ],
@@ -37,16 +52,16 @@ Return ONLY valid JSON, no markdown.`,
 
   if (!response.ok) {
     const err = await response.text();
-    return new Response(JSON.stringify({ error: err }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("LLM API error:", err);
+    return new Response(
+      JSON.stringify({ translation: "—", phonetic: word.toLowerCase() }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content || "{}";
-  
-  // Parse the JSON from the AI response
+
   let parsed;
   try {
     const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
