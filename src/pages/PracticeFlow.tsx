@@ -133,6 +133,34 @@ const PracticeFlow = () => {
   const sentenceWords = currentSentence?.text.split(" ") ?? [];
   const sentenceText = currentSentence?.text ?? "";
 
+  // Pre-load already-saved bookmarks when sentences are available
+  useEffect(() => {
+    if (!user || !sentences || sentences.length === 0) return;
+    const loadSaved = async () => {
+      const sentenceIds = sentences.map((s) => s.id);
+      const { data: phrases } = await supabase
+        .from("phrases")
+        .select("id, sentence_id")
+        .in("sentence_id", sentenceIds);
+      if (!phrases || phrases.length === 0) return;
+      const phraseIds = phrases.map((p) => p.id);
+      const { data: vocab } = await supabase
+        .from("user_vocab")
+        .select("phrase_id")
+        .eq("user_id", user.id)
+        .in("phrase_id", phraseIds);
+      if (!vocab || vocab.length === 0) return;
+      const savedPhraseIds = new Set(vocab.map((v) => v.phrase_id));
+      const savedSentenceIds = new Set(
+        phrases.filter((p) => savedPhraseIds.has(p.id)).map((p) => p.sentence_id)
+      );
+      setBookmarked(new Set(
+        sentences.map((s, i) => (savedSentenceIds.has(s.id) ? i : -1)).filter((i) => i >= 0)
+      ));
+    };
+    loadSaved();
+  }, [user, sentences]);
+
   const handleIntroContinue = () => setStep("listen");
 
   useEffect(() => {
