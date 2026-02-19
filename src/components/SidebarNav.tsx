@@ -33,7 +33,7 @@ const SidebarNav = () => {
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
             >
-              <tab.icon size={17} strokeWidth={active ? 2.2 : 1.8} />
+              <tab.icon size={17} strokeWidth={active ? 2.2 : 1.8} className={active ? "text-foreground" : "text-muted-foreground"} />
               {tab.label}
             </button>
           );
