@@ -29,7 +29,7 @@ const SidebarNav = () => {
               onClick={() => navigate(tab.path)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
                 active
-                  ? "bg-primary/8 text-primary"
+                  ? "text-foreground font-semibold"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
             >
