@@ -91,7 +91,7 @@ function CompleteScreen({ totalSentences, avgScore, onHome, onMap }: {
           Home
         </button>
         <button onClick={onMap} className="w-full bg-muted text-foreground font-medium py-3.5 rounded-xl text-sm">
-          View Map
+          View lesson
         </button>
       </div>
     </div>
