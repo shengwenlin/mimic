@@ -20,6 +20,54 @@ import {
 
 type Step = "intro" | "listen" | "record" | "feedback" | "complete";
 
+// ─── Scoring utilities ────────────────────────────────────────────────────────
+const levenshtein = (a: string, b: string): number => {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const curr = a[i - 1] === b[j - 1] ? row[j - 1] : 1 + Math.min(row[j], prev, row[j - 1]);
+      row[j - 1] = prev;
+      prev = curr;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length];
+};
+
+const fuzzyWordMatch = (a: string, b: string): boolean => {
+  if (a === b) return true;
+  if (a.length <= 2 || b.length <= 2) return false; // short words: exact only
+  const maxDist = Math.max(a.length, b.length) <= 6 ? 1 : 2;
+  return levenshtein(a, b) <= maxDist;
+};
+
+/** LCS-based alignment: returns indices of targetWords that were spoken */
+const lcsMatch = (targetWords: string[], spokenWords: string[]): Set<number> => {
+  const n = targetWords.length, m = spokenWords.length;
+  if (m === 0 || n === 0) return new Set();
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 1; i <= n; i++)
+    for (let j = 1; j <= m; j++)
+      dp[i][j] = fuzzyWordMatch(targetWords[i - 1], spokenWords[j - 1])
+        ? dp[i - 1][j - 1] + 1
+        : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  const matched = new Set<number>();
+  let i = n, j = m;
+  while (i > 0 && j > 0) {
+    if (fuzzyWordMatch(targetWords[i - 1], spokenWords[j - 1])) { matched.add(i - 1); i--; j--; }
+    else if (dp[i - 1][j] >= dp[i][j - 1]) i--;
+    else j--;
+  }
+  return matched;
+};
+
+const cleanWord = (w: string) => w.toLowerCase().replace(/[.,!?—'"]/g, "").trim();
+// ─────────────────────────────────────────────────────────────────────────────
+
 function CompleteScreen({ totalSentences, avgScore, onHome, onMap }: {
   totalSentences: number;
   avgScore: number;
@@ -111,21 +159,9 @@ const PracticeFlow = () => {
   }, [listenDone, step]);
 
   const matchSpokenWords = useCallback((spokenText: string) => {
-    const spoken = spokenText.toLowerCase().replace(/[.,!?—]/g, "");
-    const spokenWords = spoken.split(/\s+/).filter(Boolean);
-    const matched = new Set<number>();
-    let spokenIdx = 0;
-    sentenceWords.forEach((w, i) => {
-      const clean = w.toLowerCase().replace(/[.,!?—]/g, "");
-      for (let j = spokenIdx; j < spokenWords.length; j++) {
-        if (spokenWords[j] === clean) {
-          matched.add(i);
-          spokenIdx = j + 1;
-          break;
-        }
-      }
-    });
-    return matched;
+    const spokenArr = spokenText.toLowerCase().replace(/[.,!?—'"]/g, "").split(/\s+/).filter(Boolean);
+    const targetArr = sentenceWords.map(cleanWord);
+    return lcsMatch(targetArr, spokenArr);
   }, [sentenceWords]);
 
   useEffect(() => {
@@ -182,26 +218,12 @@ const PracticeFlow = () => {
       }
     };
 
-    // Score words strictly: sequential order matching
+    // LCS + fuzzy scoring: finds best global alignment, no cascade failures
     const scoreWords = (spokenText: string): ("correct" | "wrong")[] => {
-      const spoken = spokenText.toLowerCase().replace(/[.,!?—']/g, "");
-      const spokenArr = spoken.split(/\s+/).filter(Boolean);
-      const results: ("correct" | "wrong")[] = [];
-      let spokenIdx = 0;
-      for (const w of sentenceWords) {
-        const clean = w.toLowerCase().replace(/[.,!?—']/g, "");
-        let found = false;
-        // Look ahead up to 2 positions to allow minor insertions (e.g. "uh", "um")
-        for (let j = spokenIdx; j < Math.min(spokenIdx + 3, spokenArr.length); j++) {
-          if (spokenArr[j] === clean) {
-            found = true;
-            spokenIdx = j + 1;
-            break;
-          }
-        }
-        results.push(found ? "correct" : "wrong");
-      }
-      return results;
+      const spokenArr = spokenText.toLowerCase().replace(/[.,!?—'"]/g, "").split(/\s+/).filter(Boolean);
+      const targetArr = sentenceWords.map(cleanWord);
+      const matched = lcsMatch(targetArr, spokenArr);
+      return targetArr.map((_, idx) => matched.has(idx) ? "correct" : "wrong");
     };
 
     const finishRecording = async (spokenText: string) => {

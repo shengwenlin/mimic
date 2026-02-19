@@ -1,4 +1,44 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+
+// ─── Scoring utilities ────────────────────────────────────────────────────────
+const _lev = (a: string, b: string): number => {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const curr = a[i - 1] === b[j - 1] ? row[j - 1] : 1 + Math.min(row[j], prev, row[j - 1]);
+      row[j - 1] = prev; prev = curr;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length];
+};
+const _fuzz = (a: string, b: string) => {
+  if (a === b) return true;
+  if (a.length <= 2 || b.length <= 2) return false;
+  return _lev(a, b) <= (Math.max(a.length, b.length) <= 6 ? 1 : 2);
+};
+const _lcs = (target: string[], spoken: string[]): Set<number> => {
+  const n = target.length, m = spoken.length;
+  if (!n || !m) return new Set();
+  const dp: number[][] = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = 1; i <= n; i++)
+    for (let j = 1; j <= m; j++)
+      dp[i][j] = _fuzz(target[i - 1], spoken[j - 1]) ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+  const matched = new Set<number>();
+  let i = n, j = m;
+  while (i > 0 && j > 0) {
+    if (_fuzz(target[i - 1], spoken[j - 1])) { matched.add(i - 1); i--; j--; }
+    else if (dp[i - 1][j] >= dp[i][j - 1]) i--;
+    else j--;
+  }
+  return matched;
+};
+const _clean = (w: string) => w.toLowerCase().replace(/[.,!?—'"]/g, "").trim();
+// ─────────────────────────────────────────────────────────────────────────────
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Volume2, Mic, Pause, Play, RotateCcw, Check, Loader2 } from "lucide-react";
 import { useAudio } from "@/hooks/use-audio";
@@ -71,14 +111,8 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
 
   // ─── Match helper ───
   const matchSpokenWords = useCallback((spokenText: string) => {
-    const spoken = spokenText.toLowerCase().replace(/[.,!?]/g, "");
-    const spokenArr = spoken.split(/\s+/).filter(Boolean);
-    const matched = new Set<number>();
-    words.forEach((w, i) => {
-      const clean = w.toLowerCase().replace(/[.,!?]/g, "");
-      if (spokenArr.includes(clean)) matched.add(i);
-    });
-    return matched;
+    const spokenArr = spokenText.toLowerCase().replace(/[.,!?—'"]/g, "").split(/\s+/).filter(Boolean);
+    return _lcs(words.map(_clean), spokenArr);
   }, [words]);
 
   // ─── RECORD ───
@@ -88,25 +122,12 @@ const PracticeSheet = ({ open, onOpenChange, sentence }: PracticeSheetProps) => 
 
     let finished = false;
 
-    // Score words strictly: sequential order matching
+    // LCS + fuzzy scoring: global alignment, no cascade failures
     const scoreWords = (spokenText: string): ("correct" | "wrong")[] => {
-      const spoken = spokenText.toLowerCase().replace(/[.,!?—']/g, "");
-      const spokenArr = spoken.split(/\s+/).filter(Boolean);
-      const results: ("correct" | "wrong")[] = [];
-      let spokenIdx = 0;
-      for (const w of words) {
-        const clean = w.toLowerCase().replace(/[.,!?—']/g, "");
-        let found = false;
-        for (let j = spokenIdx; j < Math.min(spokenIdx + 3, spokenArr.length); j++) {
-          if (spokenArr[j] === clean) {
-            found = true;
-            spokenIdx = j + 1;
-            break;
-          }
-        }
-        results.push(found ? "correct" : "wrong");
-      }
-      return results;
+      const spokenArr = spokenText.toLowerCase().replace(/[.,!?—'"]/g, "").split(/\s+/).filter(Boolean);
+      const targetArr = words.map(_clean);
+      const matched = _lcs(targetArr, spokenArr);
+      return targetArr.map((_, idx) => matched.has(idx) ? "correct" : "wrong");
     };
 
     const beginRecording = async () => {
