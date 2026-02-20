@@ -127,6 +127,7 @@ const PracticeFlow = () => {
   const currentSessionTranscriptRef = useRef("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leavingRecordRef = useRef(false);
 
   const [wordResults, setWordResults] = useState<("correct" | "wrong")[]>([]);
   const [feedbackReady, setFeedbackReady] = useState(false);
@@ -197,6 +198,8 @@ const PracticeFlow = () => {
 
   useEffect(() => {
     if (step !== "record" || !sentenceText) return;
+    // Reset the leaving flag when entering record step
+    leavingRecordRef.current = false;
     setHighlightedWords(new Set());
     setRecordingPaused(false);
     pausedRef.current = false;
@@ -264,7 +267,7 @@ const PracticeFlow = () => {
     };
 
     const finishRecording = async (spokenText: string) => {
-      if (finished) return;
+      if (finished || leavingRecordRef.current) return;
       finished = true;
       if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; }
       if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
@@ -352,6 +355,12 @@ const PracticeFlow = () => {
   }, [sentenceIndex, TOTAL_SENTENCES]);
 
   const handleRetry = useCallback(() => {
+    // Mark that we're intentionally leaving record step
+    leavingRecordRef.current = true;
+    // Stop any ongoing recognition
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; }
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    stopPlayback();
     setFeedbackReady(false);
     setWordResults([]);
     setHighlightedWords(new Set());
@@ -359,7 +368,7 @@ const PracticeFlow = () => {
     setListenDone(false);
     listenStarted.current = false;
     setStep("listen");
-  }, []);
+  }, [stopPlayback]);
 
   const handlePrevSentence = useCallback(() => {
     if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} recognitionRef.current = null; }
@@ -454,27 +463,31 @@ const PracticeFlow = () => {
     <AppLayout showTabs={false}>
       <div className="flex flex-col min-h-screen bg-background">
         {/* Top bar */}
-        <div className="max-w-2xl mx-auto w-full px-6 pt-5 pb-2">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowExitConfirm(true)} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
-              <X size={16} className="text-muted-foreground" />
-            </button>
-            <div className="flex-1 flex gap-1.5">
-              {Array.from({ length: TOTAL_SENTENCES }).map((_, i) => {
-                const stepOrder: Record<Step, number> = { intro: 0, listen: 1, record: 2, feedback: 4, complete: 4 };
-                const subSteps = 4;
-                let fillPercent = 0;
-                if (i < sentenceIndex) fillPercent = 100;
-                else if (i === sentenceIndex) fillPercent = Math.min((stepOrder[step] / subSteps) * 100, 100);
-                return (
-                  <div key={i} className="flex-1 h-1 rounded-full bg-border/60 overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500 bg-primary" style={{ width: `${fillPercent}%`, opacity: fillPercent > 0 ? 1 : 0 }} />
-                  </div>
-                );
-              })}
+        <div className="relative pt-5 pb-2">
+          {/* Close button - positioned at left edge */}
+          <button onClick={() => setShowExitConfirm(true)} className="absolute left-4 top-5 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+            <X size={16} className="text-muted-foreground" />
+          </button>
+          {/* Progress bar - centered */}
+          <div className="max-w-2xl mx-auto w-full px-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 shrink-0" />
+              <div className="flex-1 flex gap-1.5">
+                {Array.from({ length: TOTAL_SENTENCES }).map((_, i) => {
+                  const stepOrder: Record<Step, number> = { intro: 0, listen: 1, record: 2, feedback: 4, complete: 4 };
+                  const subSteps = 4;
+                  let fillPercent = 0;
+                  if (i < sentenceIndex) fillPercent = 100;
+                  else if (i === sentenceIndex) fillPercent = Math.min((stepOrder[step] / subSteps) * 100, 100);
+                  return (
+                    <div key={i} className="flex-1 h-1 rounded-full bg-border/60 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500 bg-primary" style={{ width: `${fillPercent}%`, opacity: fillPercent > 0 ? 1 : 0 }} />
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="w-10 shrink-0" />
             </div>
-            {/* Spacer to balance with left button */}
-            <div className="w-10 h-10 shrink-0" />
           </div>
         </div>
 
