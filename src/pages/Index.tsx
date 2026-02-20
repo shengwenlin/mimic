@@ -102,7 +102,11 @@ const Index = () => {
               {completedScenes.map((scene) => {
                 const p = progress?.find((pr) => pr.scene_id === scene.id);
                 return (
-                  <div key={scene.id} className="flex items-center gap-4 py-4 border-b border-border/60 last:border-0">
+                  <div
+                    key={scene.id}
+                    className="flex items-center gap-4 py-4 border-b border-border/60 last:border-0 cursor-pointer hover:bg-muted/30 -mx-3 px-3 rounded-lg transition-colors"
+                    onClick={() => navigate(`/scene?id=${scene.id}`)}
+                  >
                     <CheckCircle2 size={20} className="text-success shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">{scene.title}</p>
