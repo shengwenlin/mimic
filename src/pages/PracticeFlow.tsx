@@ -1,6 +1,59 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import confetti from "canvas-confetti";
 import { useNavigate, useSearchParams } from "react-router-dom";
+
+// ─── Sound Effects ─────────────────────────────────────────────────────────────
+const audioCtxRef = { current: null as AudioContext | null };
+
+const getAudioContext = () => {
+  if (!audioCtxRef.current) {
+    audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  }
+  return audioCtxRef.current;
+};
+
+const playSuccessSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Pleasant ascending chime - two notes
+    [523.25, 659.25].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0, now + i * 0.12);
+      gain.gain.linearRampToValueAtTime(0.15, now + i * 0.12 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.4);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.4);
+    });
+  } catch { /* ignore audio errors */ }
+};
+
+const playNeedsWorkSound = () => {
+  try {
+    const ctx = getAudioContext();
+    const now = ctx.currentTime;
+
+    // Soft neutral tone - single gentle note
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 392; // G4
+    osc.type = "sine";
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.1, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } catch { /* ignore audio errors */ }
+};
+// ───────────────────────────────────────────────────────────────────────────────
 import { X, Bookmark, BookmarkCheck, RotateCcw, Volume2, Check, Pause, Play, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import WordDetailSheet from "@/components/WordDetailSheet";
@@ -315,6 +368,7 @@ const PracticeFlow = () => {
       if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
       setScoring(true);
       const blob = await stopRecording();
+      let isAllCorrect = false;
       try {
         const result = await transcribe(blob);
         const text = result.text || spokenText || "";
@@ -322,18 +376,31 @@ const PracticeFlow = () => {
         setWordResults(results);
         const score = Math.round((results.filter(r => r === "correct").length / results.length) * 100);
         setScores(prev => [...prev, score]);
+        isAllCorrect = results.every(r => r === "correct");
       } catch {
         if (spokenText) {
           const results = scoreWords(spokenText);
           setWordResults(results);
           const score = Math.round((results.filter(r => r === "correct").length / results.length) * 100);
           setScores(prev => [...prev, score]);
+          isAllCorrect = results.every(r => r === "correct");
         } else {
           setWordResults(sentenceWords.map(() => "correct"));
           setScores(prev => [...prev, 100]);
+          isAllCorrect = true;
         }
       }
-      setTimeout(() => { setScoring(false); setFeedbackReady(true); setStep("feedback"); }, 500);
+      setTimeout(() => {
+        setScoring(false);
+        setFeedbackReady(true);
+        setStep("feedback");
+        // Play sound effect based on result
+        if (isAllCorrect) {
+          playSuccessSound();
+        } else {
+          playNeedsWorkSound();
+        }
+      }, 500);
     };
 
     beginRecording();
