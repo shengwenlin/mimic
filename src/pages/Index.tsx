@@ -73,21 +73,20 @@ const Index = () => {
               Today's Lesson
             </p>
             <div
-              className="rounded-2xl p-7 bg-card shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+              className="rounded-2xl p-6 bg-card shadow-sm cursor-pointer hover:shadow-md transition-shadow flex items-center justify-between"
               onClick={() => navigate(`/scene?id=${todayScene.id}`)}
             >
-              <p className="text-xs text-muted-foreground mb-2">
-                Week {todayScene.week} · Day {todayScene.day}
-              </p>
-              <h3 className="text-xl font-bold font-serif text-foreground mb-1">{todayScene.title}</h3>
-              <p className="text-sm text-muted-foreground mb-8">
-                {todayScene.duration_minutes} min
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-primary">Start practice</span>
-                <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
-                  <ArrowRight size={17} className="text-primary-foreground" />
-                </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1.5">
+                  Week {todayScene.week} · Day {todayScene.day}
+                </p>
+                <h3 className="text-xl font-bold font-serif text-foreground mb-1">{todayScene.title}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {todayScene.duration_minutes} min
+                </p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shrink-0 ml-4">
+                <ArrowRight size={18} className="text-primary-foreground" />
               </div>
             </div>
           </div>
