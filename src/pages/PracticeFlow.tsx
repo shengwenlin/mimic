@@ -456,7 +456,7 @@ const PracticeFlow = () => {
         {/* Top bar */}
         <div className="max-w-2xl mx-auto w-full px-6 pt-5 pb-2">
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowExitConfirm(true)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+            <button onClick={() => setShowExitConfirm(true)} className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
               <X size={16} className="text-muted-foreground" />
             </button>
             <div className="flex-1 flex gap-1.5">
@@ -473,6 +473,8 @@ const PracticeFlow = () => {
                 );
               })}
             </div>
+            {/* Spacer to balance with left button */}
+            <div className="w-10 h-10 shrink-0" />
           </div>
         </div>
 
