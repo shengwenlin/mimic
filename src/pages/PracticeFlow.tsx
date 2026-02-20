@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import confetti from "canvas-confetti";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { X, Bookmark, BookmarkCheck, RotateCcw, Volume2, Check, Pause, Play, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
@@ -74,6 +75,47 @@ function CompleteScreen({ totalSentences, avgScore, onHome, onMap }: {
   onHome: () => void;
   onMap: () => void;
 }) {
+  useEffect(() => {
+    // Subtle confetti with warm, muted colors matching the UI
+    const colors = ["#d4c4b0", "#c9b99a", "#a8d5ba", "#e8dcc8", "#b8a082"];
+
+    // First burst - gentle center spray
+    confetti({
+      particleCount: 60,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors,
+      gravity: 0.8,
+      scalar: 1.2,
+      drift: 0,
+      ticks: 200,
+    });
+
+    // Second burst - delayed side sprays
+    setTimeout(() => {
+      confetti({
+        particleCount: 30,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.65 },
+        colors,
+        gravity: 0.7,
+        scalar: 1,
+        ticks: 180,
+      });
+      confetti({
+        particleCount: 30,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.65 },
+        colors,
+        gravity: 0.7,
+        scalar: 1,
+        ticks: 180,
+      });
+    }, 200);
+  }, []);
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 animate-fade-in">
       <div className="flex flex-col items-center text-center">
