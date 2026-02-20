@@ -51,7 +51,15 @@ const Index = () => {
 
   const completedIds = new Set(progress?.filter((p) => p.completed_at).map((p) => p.scene_id) ?? []);
   const todayScene = sceneList.find((s) => !completedIds.has(s.id)) ?? sceneList[sceneList.length - 1];
-  const completedScenes = sceneList.filter((s) => completedIds.has(s.id));
+  const completedScenes = sceneList
+    .filter((s) => completedIds.has(s.id))
+    .sort((a, b) => {
+      const aProgress = progress?.find((p) => p.scene_id === a.id);
+      const bProgress = progress?.find((p) => p.scene_id === b.id);
+      const aTime = aProgress?.completed_at ? new Date(aProgress.completed_at).getTime() : 0;
+      const bTime = bProgress?.completed_at ? new Date(bProgress.completed_at).getTime() : 0;
+      return bTime - aTime; // Most recent first
+    });
 
   return (
     <AppLayout>
