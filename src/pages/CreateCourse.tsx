@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
@@ -95,6 +95,15 @@ function buildContext(roleId: string, comfortId: string, scenarios: string[]): s
   return `Alex is a ${roleEn} at a US tech company with a distributed international team. Alex ${comfortDesc}. The biggest challenge is: ${topScenario.toLowerCase()}. This course follows Alex through real workplace moments — including ${topScenario.toLowerCase()}${restStr}.`;
 }
 
+function buildCourseName(roleId: string, scenarios: string[]): string {
+  const role = ROLES.find((r) => r.id === roleId);
+  const roleEn = role?.en ?? "Professional";
+  const topScenario = scenarios[0] ?? "";
+  // Create a short, catchy course name
+  const shortScenario = topScenario.replace(/^(Defending|Explaining|Presenting|Syncing|Running|Getting|Handling|Pushing|Making|Facilitating|Evaluating|Advocating|Discussing|Collaborating|Requesting|Turning|Speaking|Giving|Building)\s+/i, "").replace(/\s+my\s+/gi, " ").replace(/\s+in\s+.*$/, "");
+  return `${roleEn}: ${topScenario.length > 40 ? shortScenario : topScenario}`;
+}
+
 const TOTAL_STEPS = 4;
 
 const CreateCourse = () => {
@@ -107,15 +116,18 @@ const CreateCourse = () => {
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedComfort, setSelectedComfort] = useState("");
   const [selectedScenarios, setSelectedScenarios] = useState<string[]>([]);
+  const [courseName, setCourseName] = useState("");
   const [context, setContext] = useState("");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressStep, setProgressStep] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Auto-generate context when entering step 4
+  // Auto-generate course name and context when entering step 4
   useEffect(() => {
     if (step === 4 && selectedRole && selectedComfort && selectedScenarios.length > 0) {
+      setCourseName(buildCourseName(selectedRole, selectedScenarios));
       setContext(buildContext(selectedRole, selectedComfort, selectedScenarios));
     }
   }, [step]);
@@ -151,12 +163,26 @@ const CreateCourse = () => {
     if (step < TOTAL_STEPS) setStep((s) => s + 1);
   };
 
+  const handleCancel = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setLoading(false);
+    setProgress(0);
+    setProgressStep("");
+  };
+
   const handleGenerate = async () => {
     if (!user || context.trim().length < 20) return;
     setLoading(true);
-    setProgress(0);
+    setProgress(2);
     setProgressStep("Connecting to server...");
     setError(null);
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-course`, {
         method: "POST",
@@ -165,7 +191,8 @@ const CreateCourse = () => {
           apikey: SUPABASE_KEY,
           Authorization: `Bearer ${SUPABASE_KEY}`,
         },
-        body: JSON.stringify({ context: context.trim(), user_id: user.id }),
+        body: JSON.stringify({ context: context.trim(), course_name: courseName.trim(), user_id: user.id }),
+        signal: abortController.signal,
       });
       if (!response.ok) {
         const data = await response.json();
@@ -197,8 +224,14 @@ const CreateCourse = () => {
         }
       }
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        // User cancelled, don't show error
+        return;
+      }
       setError(err instanceof Error ? err.message : "Generation failed, please try again");
       setLoading(false);
+    } finally {
+      abortControllerRef.current = null;
     }
   };
 
@@ -222,6 +255,12 @@ const CreateCourse = () => {
             </div>
             <p className="text-xs text-muted-foreground text-center mt-2">{progress}%</p>
           </div>
+          <button
+            onClick={handleCancel}
+            className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       </AppLayout>
     );
@@ -347,13 +386,26 @@ const CreateCourse = () => {
                 <h2 className="text-xl font-bold font-serif text-foreground">Meet your character</h2>
                 <p className="text-sm text-muted-foreground mt-1">Your course will be built around this persona</p>
               </div>
-              <textarea
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-                rows={7}
-                className="w-full bg-card border border-border rounded-2xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors resize-none leading-relaxed"
-              />
-              <p className="text-xs text-muted-foreground -mt-2">You can edit this description before generating</p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Course name</label>
+                <input
+                  type="text"
+                  value={courseName}
+                  onChange={(e) => setCourseName(e.target.value)}
+                  className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm font-medium text-foreground outline-none focus:border-primary transition-colors"
+                  placeholder="Enter course name"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-muted-foreground font-medium">Character description</label>
+                <textarea
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  rows={7}
+                  className="w-full bg-card border border-border rounded-2xl px-4 py-3 text-sm text-foreground outline-none focus:border-primary transition-colors resize-none leading-relaxed"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground -mt-2">You can edit these before generating</p>
               {error && (
                 <div className="bg-destructive/10 text-destructive text-sm rounded-xl px-4 py-3">
                   {error}
@@ -361,7 +413,7 @@ const CreateCourse = () => {
               )}
               <button
                 onClick={handleGenerate}
-                disabled={context.trim().length < 20}
+                disabled={context.trim().length < 20 || courseName.trim().length < 3}
                 className="w-full bg-primary text-primary-foreground font-semibold py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Sparkles size={16} className="text-primary-foreground" />

@@ -1,4 +1,4 @@
-import { CheckCircle2, Lock, Circle, ChevronDown, Plus, Trash2, BookOpen, Sparkles } from "lucide-react";
+import { CheckCircle2, Lock, Circle, ChevronDown, Plus, Trash2, BookOpen, Sparkles, Pencil, Check, X } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import { useScenes, useSceneProgress, useCourses } from "@/hooks/use-scenes";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,8 @@ const StoryMapScreen = () => {
   const [showCoursePicker, setShowCoursePicker] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
 
   const confirmDeleteCourse = async () => {
     if (!confirmDeleteId) return;
@@ -48,6 +50,32 @@ const StoryMapScreen = () => {
     e.stopPropagation();
     setConfirmDeleteId(courseId);
     setShowCoursePicker(false);
+  };
+
+  const handleStartEdit = (e: React.MouseEvent, courseId: string, currentTitle: string) => {
+    e.stopPropagation();
+    setEditingCourseId(courseId);
+    setEditingTitle(currentTitle);
+  };
+
+  const handleCancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCourseId(null);
+    setEditingTitle("");
+  };
+
+  const handleSaveEdit = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editingCourseId || !editingTitle.trim()) return;
+    const { error } = await supabase.from("courses").update({ title: editingTitle.trim() }).eq("id", editingCourseId);
+    if (error) {
+      console.error("Failed to update course:", error);
+      alert("Failed to save: " + error.message);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["courses"] });
+    setEditingCourseId(null);
+    setEditingTitle("");
   };
 
   const activeCourse = courses?.find((c) => c.id === activeCourseId);
@@ -128,22 +156,61 @@ const StoryMapScreen = () => {
                     c.id === activeCourseId ? "bg-primary/5" : "hover:bg-muted/40"
                   }`}
                 >
-                  <button
-                    onClick={() => { setActiveCourse(c.id); setShowCoursePicker(false); }}
-                    className={`flex-1 text-left px-4 py-3 text-sm ${
-                      c.id === activeCourseId ? "text-primary font-semibold" : "text-foreground"
-                    }`}
-                  >
-                    {c.title}
-                  </button>
-                  {!c.is_system && (
-                    <button
-                      onClick={(e) => handleDeleteCourse(e, c.id)}
-                      disabled={deletingId === c.id}
-                      className="px-3 py-3 text-muted-foreground/50 hover:text-destructive transition-colors disabled:opacity-40"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                  {editingCourseId === c.id ? (
+                    <div className="flex-1 flex items-center gap-1 px-2 py-2">
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit(e as unknown as React.MouseEvent);
+                          if (e.key === "Escape") handleCancelEdit(e as unknown as React.MouseEvent);
+                        }}
+                        autoFocus
+                        className="flex-1 px-2 py-1 text-sm bg-background border border-border rounded-lg outline-none focus:border-primary"
+                      />
+                      <button
+                        onClick={handleSaveEdit}
+                        className="p-1.5 text-success hover:bg-success/10 rounded-md transition-colors"
+                      >
+                        <Check size={14} />
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="p-1.5 text-muted-foreground hover:bg-muted rounded-md transition-colors"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => { setActiveCourse(c.id); setShowCoursePicker(false); }}
+                        className={`flex-1 text-left px-4 py-3 text-sm ${
+                          c.id === activeCourseId ? "text-primary font-semibold" : "text-foreground"
+                        }`}
+                      >
+                        {c.title}
+                      </button>
+                      {!c.is_system && (
+                        <>
+                          <button
+                            onClick={(e) => handleStartEdit(e, c.id, c.title)}
+                            className="px-2 py-3 text-muted-foreground/50 hover:text-primary transition-colors"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                          <button
+                            onClick={(e) => handleDeleteCourse(e, c.id)}
+                            disabled={deletingId === c.id}
+                            className="px-3 py-3 text-muted-foreground/50 hover:text-destructive transition-colors disabled:opacity-40"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
               ))}

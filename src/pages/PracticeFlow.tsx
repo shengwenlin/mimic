@@ -122,6 +122,9 @@ const PracticeFlow = () => {
   const [highlightedWords, setHighlightedWords] = useState<Set<number>>(new Set());
   const [scoring, setScoring] = useState(false);
   const [recordingPaused, setRecordingPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const accumulatedTranscriptRef = useRef("");
+  const currentSessionTranscriptRef = useRef("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -196,6 +199,8 @@ const PracticeFlow = () => {
     if (step !== "record" || !sentenceText) return;
     setHighlightedWords(new Set());
     setRecordingPaused(false);
+    pausedRef.current = false;
+    accumulatedTranscriptRef.current = "";
 
     let finished = false;
 
@@ -215,19 +220,23 @@ const PracticeFlow = () => {
         let stopped = false;
 
         recognition.onresult = (event: SpeechRecognitionEvent) => {
-          let fullTranscript = "";
+          if (pausedRef.current) return;
+          let sessionTranscript = "";
           for (let i = 0; i < event.results.length; i++) {
-            fullTranscript += event.results[i][0].transcript + " ";
+            sessionTranscript += event.results[i][0].transcript + " ";
           }
-          lastTranscript = fullTranscript.trim();
+          currentSessionTranscriptRef.current = sessionTranscript.trim();
+          const fullTranscript = (accumulatedTranscriptRef.current + " " + sessionTranscript).trim();
+          lastTranscript = fullTranscript;
           const matched = matchSpokenWords(fullTranscript);
           setHighlightedWords(matched);
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = setTimeout(() => { stopped = true; finishRecording(lastTranscript); }, 2500);
+          silenceTimerRef.current = setTimeout(() => { if (!pausedRef.current) { stopped = true; finishRecording(lastTranscript); } }, 2500);
         };
         recognition.onspeechend = () => {
+          if (pausedRef.current) return;
           if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-          silenceTimerRef.current = setTimeout(() => { stopped = true; finishRecording(lastTranscript); }, 2000);
+          silenceTimerRef.current = setTimeout(() => { if (!pausedRef.current) { stopped = true; finishRecording(lastTranscript); } }, 2000);
         };
         recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
           if (event.error === "no-speech" || event.error === "aborted") return;
@@ -487,23 +496,15 @@ const PracticeFlow = () => {
               </button>
               <div className="bg-card rounded-2xl p-8 flex-1 flex flex-col shadow-xs">
                 <div className="relative flex items-center justify-center">
-                  {!isPlaying && !ttsLoading && <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Paused</div>}
+                  {(isPlaying || ttsLoading) && <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Listening...</div>}
                   <button onClick={toggleBookmark} className="absolute right-0">
                     {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
                   </button>
                 </div>
-                <div className="flex-1 flex flex-col items-center justify-center py-10">
+                <div className="flex-1 flex flex-col items-center justify-center">
                   <p className="text-3xl font-medium text-center leading-relaxed text-muted-foreground/40">{sentenceText}</p>
                 </div>
-                <p className="text-sm text-muted-foreground text-center mb-7">{currentSentence?.translation}</p>
-                <div className="flex items-center justify-center gap-5 mb-2">
-                  <button onClick={() => { stopPlayback(); setListenDone(false); listenStarted.current = false; replayTTS(); }} className="w-11 h-11 rounded-full bg-muted flex items-center justify-center">
-                    <RotateCcw size={17} className="text-primary" />
-                  </button>
-                  <button onClick={() => { if (isPlaying) { stopPlayback(); } else { replayTTS(); } }} className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    {ttsLoading && !isPlaying ? <Loader2 size={26} className="text-primary animate-spin" /> : isPlaying ? <Pause size={26} className="text-primary" /> : <Play size={26} className="text-primary ml-0.5" />}
-                  </button>
-                </div>
+                <p className="text-sm text-muted-foreground text-center mb-20">{currentSentence?.translation}</p>
               </div>
               <button disabled={!canGoNext} onClick={handleGoNext} className="self-center w-10 h-10 rounded-full bg-muted flex items-center justify-center transition-colors disabled:opacity-25 hover:bg-muted/70">
                 <ChevronRight size={20} className="text-foreground" />
@@ -526,7 +527,7 @@ const PracticeFlow = () => {
                   ) : recordingPaused ? (
                     <div className="bg-muted text-muted-foreground text-xs font-medium px-3 py-1 rounded-lg">Paused</div>
                   ) : (
-                    <div className="bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-lg animate-pulse">Speak now...</div>
+                    <div className="bg-foreground text-background text-xs font-medium px-3 py-1 rounded-lg">Speak now...</div>
                   )}
                   <button onClick={toggleBookmark} className="absolute right-0">
                     {isBookmarked ? <BookmarkCheck size={18} className="text-primary" /> : <Bookmark size={18} className="text-muted-foreground/40" />}
@@ -540,25 +541,41 @@ const PracticeFlow = () => {
                   </p>
                 </div>
                 <p className="text-sm text-muted-foreground text-center mb-7">{currentSentence?.translation}</p>
-                <div className="flex items-center justify-center gap-5 mb-2">
-                  <button disabled={scoring} onClick={() => { stopPlayback(); setScoring(false); handleRetry(); }} className="w-11 h-11 rounded-full bg-muted flex items-center justify-center disabled:opacity-30">
-                    <RotateCcw size={17} className="text-primary" />
+                <div className="relative flex items-center justify-center mb-2">
+                  <button disabled={scoring} onClick={() => { stopPlayback(); setScoring(false); handleRetry(); }} className="absolute right-[calc(50%+52px)] w-11 h-11 flex items-center justify-center disabled:opacity-30">
+                    <RotateCcw size={24} className="text-muted-foreground" />
                   </button>
                   <button
                     disabled={scoring}
                     onClick={() => {
                       if (recordingPaused) {
+                        // Resume: reset current session ref and restart recognition
+                        currentSessionTranscriptRef.current = "";
+                        pausedRef.current = false;
                         setRecordingPaused(false);
                         if (recognitionRef.current) try { recognitionRef.current.start(); } catch {}
                       } else {
+                        // Pause: save current session transcript to accumulated
+                        accumulatedTranscriptRef.current = (accumulatedTranscriptRef.current + " " + currentSessionTranscriptRef.current).trim();
+                        currentSessionTranscriptRef.current = "";
+                        pausedRef.current = true;
                         setRecordingPaused(true);
                         if (recognitionRef.current) try { recognitionRef.current.stop(); } catch {}
                         if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
                       }
                     }}
-                    className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center disabled:opacity-30"
+                    className="w-16 h-16 rounded-full bg-[#8c7d73] flex items-center justify-center disabled:opacity-30 outline-none focus:outline-none focus:ring-0 focus-visible:ring-0"
                   >
-                    {recordingPaused ? <Play size={26} className="text-primary ml-0.5" /> : <Pause size={26} className="text-primary" />}
+                    {recordingPaused ? (
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="white" className="ml-0.5">
+                        <path d="M6.906 4.537A1 1 0 0 0 5.5 5.41v13.18a1 1 0 0 0 1.406.873l12.5-6.59a1 1 0 0 0 0-1.746l-12.5-6.59z" />
+                      </svg>
+                    ) : (
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="white">
+                        <rect x="6" y="5" width="4" height="14" rx="1.5" />
+                        <rect x="14" y="5" width="4" height="14" rx="1.5" />
+                      </svg>
+                    )}
                   </button>
                 </div>
               </div>
@@ -611,10 +628,10 @@ const PracticeFlow = () => {
                   {currentSentence?.translation}
                 </p>
                 <div className="flex items-center justify-center gap-8 mb-5">
-                  <button onClick={replayTTS} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-primary font-medium disabled:opacity-50">
+                  <button onClick={replayTTS} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-foreground font-medium disabled:opacity-50">
                     {playingType === "tts" ? <Pause size={15} /> : <Volume2 size={15} />} Example
                   </button>
-                  <button onClick={handlePlayRecording} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-primary font-medium disabled:opacity-50">
+                  <button onClick={handlePlayRecording} disabled={isPlaying} className="flex items-center gap-1.5 text-sm text-foreground font-medium disabled:opacity-50">
                     {playingType === "recording" ? <Pause size={15} /> : <Play size={15} />} Yours
                   </button>
                 </div>

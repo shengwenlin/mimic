@@ -85,7 +85,7 @@ serve(async (req) => {
     const body = await req.json();
     const { context, user_id } = body;
     const character_name: string = body.character_name || extractCharacterName(context);
-    const title: string = body.title || `${character_name} 的职场英语`;
+    const title: string = body.course_name || body.title || `${character_name}'s Workplace English`;
 
     if (!context || !user_id) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -111,7 +111,7 @@ serve(async (req) => {
 
         try {
           // Phase 1: Generate content (5 parallel batches, each ~16% of total)
-          send({ progress: 0, step: "正在生成课程内容..." });
+          send({ progress: 5, step: "Generating course content..." });
 
           let completed = 0;
           const batchResults: unknown[][] = [];
@@ -128,8 +128,8 @@ serve(async (req) => {
               callLLM(buildPrompt(character_name, context, b.from, b.to), LLM_API_KEY).then((result) => {
                 batchResults[i] = result;
                 completed++;
-                const pct = Math.round((completed / 5) * 80);
-                send({ progress: pct, step: `已生成 ${completed * 6}/30 天内容` });
+                const pct = 5 + Math.round((completed / 5) * 75);
+                send({ progress: pct, step: `Generated ${completed * 6}/30 days of content` });
               })
             )
           );
@@ -144,7 +144,7 @@ serve(async (req) => {
           }>;
 
           // Phase 2: Save to database
-          send({ progress: 85, step: "正在保存课程数据..." });
+          send({ progress: 85, step: "Saving course data..." });
 
           const { data: course, error: courseErr } = await supabase
             .from("courses")
@@ -169,7 +169,7 @@ serve(async (req) => {
             .select("id, day");
           if (sceneErr) throw sceneErr;
 
-          send({ progress: 90, step: "正在保存练习句子..." });
+          send({ progress: 90, step: "Saving practice sentences..." });
 
           const dayToSceneId = new Map((scenes ?? []).map((s: { id: string; day: number }) => [s.day, s.id]));
 
@@ -194,7 +194,7 @@ serve(async (req) => {
             .select("id");
           if (sentErr) throw sentErr;
 
-          send({ progress: 95, step: "正在保存短语数据..." });
+          send({ progress: 95, step: "Saving phrase data..." });
 
           const phraseRows: Array<{ sentence_id: string; english: string; chinese: string; usage_tip: string }> = [];
           (sentences ?? []).forEach((sent: { id: string }, i: number) => {
@@ -215,7 +215,7 @@ serve(async (req) => {
             if (phraseErr) throw phraseErr;
           }
 
-          send({ progress: 100, step: "课程生成完成！", done: true, course_id: courseId });
+          send({ progress: 100, step: "Course generation complete!", done: true, course_id: courseId });
         } catch (error) {
           send({ error: error.message });
         } finally {
