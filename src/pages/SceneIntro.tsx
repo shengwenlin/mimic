@@ -17,12 +17,11 @@ const SceneIntro = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex justify-center">
-      <div className="w-full max-w-xl min-h-screen relative flex flex-col px-10 pt-8">
-        <button onClick={() => navigate(-1)} className="mb-8 w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-          <ArrowLeft size={17} className="text-foreground" />
-        </button>
-
+    <div className="min-h-screen bg-background flex justify-center relative">
+      <button onClick={() => navigate(-1)} className="absolute left-4 top-5 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+        <ArrowLeft size={17} className="text-foreground" />
+      </button>
+      <div className="w-full max-w-xl min-h-screen flex flex-col px-10 pt-12">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
           Week {scene.week} · Day {scene.day}
         </p>

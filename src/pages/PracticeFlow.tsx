@@ -798,8 +798,7 @@ const PracticeFlow = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Continue</AlertDialogCancel>
             <AlertDialogAction onClick={() => {
-              if (window.history.length > 2) navigate(-1);
-              else navigate("/map", { replace: true });
+              navigate("/", { replace: true });
             }}>Leave</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
